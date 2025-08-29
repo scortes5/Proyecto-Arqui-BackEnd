@@ -42,11 +42,10 @@ client.on('message', async (topic, message) => {
     }
 
     const result = await response.json();
-    console.log(`📤 Propiedad enviada a la API: ${result.name}`);
+    console.log(`🏠 Propiedad enviada a la API: id: ${result.id}. ${result.name}`);
   } catch (err) {
-    console.error('⚠️ Error al enviar propiedad a la API:', err.message);
+    console.error('Error al enviar propiedad a la API:', err.message);
   }
 });
-
 
 

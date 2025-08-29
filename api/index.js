@@ -11,10 +11,10 @@ app.use(Logger());
 app.use(router.routes()).use(router.allowedMethods());
 
 db.sequelize.sync({ alter: true }).then(() => {
-  console.log('📦 Base de datos sincronizada');
+  console.log('Base de datos sincronizada');
   app.listen(3000, () => {
-    console.log('🚀 API corriendo en puerto 3000');
+    console.log('API corriendo en puerto 3000');
   });
 }).catch((err) => {
-  console.error('❌ Error al sincronizar la base de datos:', err.message);
+  console.error('Error al sincronizar la base de datos:', err.message);
 });

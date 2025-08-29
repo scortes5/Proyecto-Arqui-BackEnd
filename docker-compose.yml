@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api:
     build: ./api
@@ -8,15 +6,14 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - DB_HOST=db
-      - DB_USER=mayafzt
-      - DB_PASS=cuchufli
-      - DB_NAME=IIC2173-desarrollo
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USERNAME}
+      - DB_PASS=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
     env_file:
       - .env
     depends_on:
       - db
-      - mqtt
 
   mqtt:
     build: ./mqtt
@@ -25,14 +22,16 @@ services:
       - "1883:1883"
     env_file:
       - .env
+    depends_on:
+      - api
 
   db:
     image: postgres:15
     container_name: postgres-db
     environment:
-      POSTGRES_USER: mayafzt
-      POSTGRES_PASSWORD: cuchufli
-      POSTGRES_DB: IIC2173-desarrollo
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
