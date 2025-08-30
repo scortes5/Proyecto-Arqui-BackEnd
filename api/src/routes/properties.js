@@ -6,23 +6,52 @@ const { Property } = require('../models')
 // -------------------------------------- METODO GET ---------------------------------------------
 // obtener todas las propiedades
 router.get('/', async (ctx) => {
-    try {
-        const properties = await Property.findAll();
+  try {
+    const { page = 1, limit = 25, price, location, date } = ctx.query;
+    const offset = (page - 1) * limit;
 
-        if (properties.length === 0) {
-          ctx.status = 404;
-          ctx.body = { error: 'Property not found' };
-          return;
-        }
+    const where = {};
 
-        ctx.body = properties;
-        ctx.status = 200;
+    if (price) {
+      where.price = { [Op.lte]: parseFloat(price) };
+    }
 
-      } catch (error) {
-        ctx.status = 500;
-        ctx.body = { error: error };
-      }
+    if (location) {
+      where.location = { [Op.iLike]: `%${location}%` };
+    }
+
+    if (date) {
+      const start = new Date(date);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+
+      where.timestamp = {
+        [Op.between]: [start.toISOString(), end.toISOString()]
+      };
+    }
+
+
+    const properties = await Property.findAndCountAll({
+      where,
+      offset,
+      limit: parseInt(limit),
+      order: [['timestamp', 'DESC']],
+    });
+
+    ctx.body = {
+      total: properties.count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      results: properties.rows,
+    };
+    ctx.status = 200;
+
+  } catch (error) {
+    ctx.status = 500;
+    ctx.body = { error: error.message };
+  }
 });
+
 
 // Obtener una propiedad por su id
 router.get('/:id', async (ctx) => {
