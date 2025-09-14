@@ -2,3 +2,5 @@
 IIC2173.pem
 node_modules/
 *.log
+.DS_Store
+.vscode/
