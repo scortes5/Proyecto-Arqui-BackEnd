@@ -13,6 +13,7 @@
   "description": "",
   "dependencies": {
     "@koa/router": "^14.0.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "init": "^0.1.2",
     "koa": "^3.0.1",
