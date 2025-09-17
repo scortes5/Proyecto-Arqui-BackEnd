@@ -7,14 +7,6 @@ const db = require("./src/models");
 
 const app = new Koa();
 
-app.use(
-  cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
 app.use(bodyParser());
 app.use(Logger());
 app.use(router.routes()).use(router.allowedMethods());
