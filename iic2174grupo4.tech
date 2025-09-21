@@ -3,46 +3,35 @@ upstream loadbalanceriic2173grupo4 {
     server localhost:3001;
     server localhost:3002;
 }
-
 server {
+    listen 443 ssl http2;
     server_name iic2173grupo4.tech www.iic2173grupo4.tech;
-
+    ssl_certificate /etc/letsencrypt/live/iic2173grupo4.tech/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/iic2173grupo4.tech/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf; # Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # Certbot
     location / {
-        proxy_pass http://loadbalanceriic2173grupo4/;
+        proxy_pass http://loadbalanceriic2173grupo4;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_redirect off;
+        # CORS 
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS';
+        add_header Access-Control-Allow-Headers 'Content-Type, Authorization';
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Max-Age 1728000;
+            add_header Content-Type 'text/plain charset=UTF-8';
+            add_header Content-Length 0;
+            return 204;
+        }
     }
-
-    listen 443 ssl; # managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/iic2173grupo4.tech/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/iic2173grupo4.tech/privkey.pem; # managed by Certbot
-    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
-
-
 }
-
-
-
 server {
-    if ($host = www.iic2173grupo4.tech) {
-        return 301 https://$host$request_uri;
-    } # managed by Certbot
-
-
-    if ($host = iic2173grupo4.tech) {
-        return 301 https://$host$request_uri;
-    } # managed by Certbot
-
-
     listen 80;
-    server_name iic2173grupo4.tech www.iic2173grupo4.tech;
-    return 404; # managed by Certbot
-
-
-
-
+    server_name api.iic2173grupo4.tech;
+    return 301 https://$host$request_uri;
 }
