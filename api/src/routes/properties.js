@@ -77,25 +77,36 @@ router.get('/:id', async (ctx) => {
 });
 
 // -------------------------------------- METODO POST ---------------------------------------------
-// crear una nueva propiedad
+// crear o actualizar propiedad
 router.post('/', async (ctx) => {
   try {
     const { 
       name, price, currency, bedrooms, bathrooms, m2, location, img, url, is_project, timestamp
     } = ctx.request.body;
 
-    const newProperty = await Property.create({
-      name, price, currency, bedrooms, bathrooms, m2, location, img, url, is_project, timestamp
-    });
+    let property = await Property.findOne({ where: { name } });
+
+    if (property) {
+      property.reservations = (property.reservations || 0) + 1;
+      await property.save();
+      console.log(`Propiedad existente actualizada: ${name}, reservations: ${property.reservations}`);
+    } else {
+      property = await Property.create({
+        name, price, currency, bedrooms, bathrooms,m2, location, img,url, is_project, timestamp
+      });
+      console.log(`Propiedad creada: ${name}`);
+    }
 
     ctx.status = 201;
-    ctx.body = newProperty;
+    ctx.body = property;
 
   } catch (error) {
+    console.error("Error al crear/actualizar propiedad:", error);
     ctx.status = 500;
     ctx.body = { error: error.message };
   }
 });
 
 module.exports = router;
+
 

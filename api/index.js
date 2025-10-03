@@ -11,14 +11,12 @@ app.use(bodyParser());
 app.use(Logger());
 app.use(router.routes()).use(router.allowedMethods());
 
-db.sequelize
-  .sync({ alter: true })
+db.sequelize.authenticate()
   .then(() => {
-    console.log("Base de datos sincronizada");
+    console.log("Conectado a la base de datos");
     app.listen(3000, () => {
       console.log("API corriendo en puerto 3000");
     });
   })
-  .catch((err) => {
-    console.error("Error al sincronizar la base de datos:", err.message);
-  });
+  .catch(err => console.error("Error al conectar:", err.message));
+

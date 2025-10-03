@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@koa/cors": "^5.0.0",
     "@koa/router": "^14.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",

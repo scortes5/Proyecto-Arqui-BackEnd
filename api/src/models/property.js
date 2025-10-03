@@ -23,7 +23,14 @@ module.exports = (sequelize, DataTypes) => {
     location: DataTypes.STRING,
     img: DataTypes.STRING,
     url: DataTypes.STRING,
-    is_proyect: DataTypes.BOOLEAN,
+    is_project: {               
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    reservations: {               
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    },
     timestamp: DataTypes.STRING
   }, {
     sequelize,
