@@ -4,4 +4,4 @@ node_modules/
 *.log
 .DS_Store
 .vscode/
-backup_final.sql
+api/src/config/config.js

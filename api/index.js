@@ -7,7 +7,13 @@ const db = require("./src/models");
 
 const app = new Koa();
 
-app.use(bodyParser());
+app.use(bodyParser({
+  enableTypes: ['json', 'form', 'text'],
+  extendTypes: {
+    json: ['application/x-javascript']
+  }
+}));
+
 app.use(Logger());
 app.use(router.routes()).use(router.allowedMethods());
 
