@@ -45,7 +45,7 @@ router.post("/buy", async (ctx) => {
 
   const wallet = await Wallet.findOne({ where: { user_id: userId } });
   if (!wallet || wallet.balance < cost) {
-    ctx.throw(400, "Dinero Insuficiente");
+    ctx.throw(402, "Dinero Insuficiente");
   }
 
   const existing = await Appointment.findOne({
@@ -71,6 +71,7 @@ router.post("/buy", async (ctx) => {
 
   wallet.balance -= cost;
   property.reservations -= 1;
+  await property.save();
   await wallet.save();
 
   ctx.body = { request_id, status: "PENDING" };
