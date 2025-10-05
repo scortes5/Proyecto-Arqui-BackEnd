@@ -12,7 +12,7 @@ router.post("/topup", async (ctx) => {
   const {amount} = ctx.request.body;
 
   if (!amount || typeof amount !== "number") {
-    ctx.throw(400, "Invalid amount");
+    ctx.throw(400, "Monto Invalido");
   }
 
   const [wallet, created] = await Wallet.findOrCreate({
@@ -44,7 +44,7 @@ router.get("/balance", async (ctx) => {
   const { userId } = ctx.state.user;
 
   if (!userId || typeof userId !== "string") {
-    ctx.throw(400, "Invalid or missing userId");
+    ctx.throw(400, "Usuario no Valido");
   }
 
   const [wallet] = await Wallet.findOrCreate({
