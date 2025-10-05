@@ -16,7 +16,7 @@ router.post("/topup", async (ctx) => {
   }
 
   const [wallet, created] = await Wallet.findOrCreate({
-    where: { userId: userId },
+    where: { user_id: userId },
     defaults: { balance: amount }
   });
 
@@ -48,7 +48,7 @@ router.get("/balance", async (ctx) => {
   }
 
   const [wallet] = await Wallet.findOrCreate({
-    where: { userId },
+    where: { user_id: userId },
     defaults: { balance: 0 }
   });
 

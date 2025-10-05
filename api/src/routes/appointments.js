@@ -8,7 +8,8 @@ const { v4: uuidv4 } = require("uuid");
 
 // POST /appointments/buy
 router.post("/buy", async (ctx) => {
-  const { user_id, property_id } = ctx.request.body;
+  const { userId: user_id } = ctx.state.user;
+  const {property_id } = ctx.request.body;
 
   if (!property_id || !user_id) {
     ctx.throw(400, "Missing required fields");
@@ -84,8 +85,7 @@ router.post("/", async (ctx) => {
     group_id,
     property_url,
     status: "PENDING",
-    reason,
-    created_at
+    reason
   });
   }
 
@@ -99,7 +99,7 @@ router.post("/", async (ctx) => {
 
 // GET /appointments
 router.get("/", async (ctx) => {
-  const { user_id } = ctx.request.body;
+  const { userId: user_id } = ctx.state.user;
 
   const appointments = await Appointment.findAll({
     where: { user_id },
@@ -183,7 +183,7 @@ router.post("/validate", async (ctx) => {
 // GET /appointments/status/id
 router.get("/status/:request_id", async (ctx) => {
   const { request_id } = ctx.params;
-  const { user_id } = ctx.request.body;
+  const { userId: user_id } = ctx.state.user;
 
   const appointment = await Appointment.findOne({
     where: { request_id, user_id }

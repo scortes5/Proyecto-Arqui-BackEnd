@@ -1,4 +1,4 @@
-const NewRelic = require('newrelic'); // Mantener como primera línea
+// const NewRelic = require('newrelic'); // Mantener como primera línea
 const Koa = require("koa");
 const Logger = require("koa-logger");
 const bodyParser = require("koa-bodyparser");
@@ -16,17 +16,24 @@ app.use(bodyParser({
 }));
 
 app.use(Logger());
-app.use(async(ctx, next) => {
+
+app.use(async (ctx, next) => {
   try {
-    const userId = ctx.req.apiGateway?.event?.requestContext?.authorizer?.userId;
-    if (userId){
-      ctx.state.user = { userId : userId }
+    const userId = ctx.request.headers["x-user-id"];
+    const userEmail = ctx.request.headers["x-user-email"];
+
+    if (userId) {
+      ctx.state.user = {
+        userId,
+        userEmail
+      };
     }
   } catch (err) {
-    console.error("Error al obtener el userId:", err)
+    console.error("Error al obtener el userId:", err);
   }
   await next();
 });
+
 
 app.use(router.routes()).use(router.allowedMethods());
 
