@@ -1,3 +1,4 @@
+const NewRelic = require('newrelic'); // Mantener como primera línea
 const Koa = require("koa");
 const Logger = require("koa-logger");
 const bodyParser = require("koa-bodyparser");
