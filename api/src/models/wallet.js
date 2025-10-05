@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   Wallet.init({
     user_id: {
-    type: DataTypes.UUID,
+    type: DataTypes.STRING,
     primaryKey: true
   },
   balance: {
