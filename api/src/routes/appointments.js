@@ -24,6 +24,10 @@ router.post("/buy", async (ctx) => {
     ctx.throw(404, "Propiedad no Encontrada");
   }
 
+  if (property.reservations < 1) {
+    ctx.throw(409, "No existen Reservas disponibles para la propiedad");
+  }
+
   const { price, currency, url: url } = property;
   const property_url = url.split("#")[0];
 
@@ -66,6 +70,7 @@ router.post("/buy", async (ctx) => {
   });
 
   wallet.balance -= cost;
+  property.reservations -= 1;
   await wallet.save();
 
   ctx.body = { request_id, status: "PENDING" };
