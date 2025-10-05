@@ -17,6 +17,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "init": "^0.1.2",
+    "jsonwebtoken": "^9.0.2",
     "koa": "^3.0.1",
     "koa-bodyparser": "^4.4.1",
     "koa-logger": "^4.0.0",
