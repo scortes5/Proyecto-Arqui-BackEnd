@@ -64,22 +64,37 @@ router.post("/buy", async (ctx) => {
   wallet.balance -= cost;
   await wallet.save();
 
-  await fetch(`${process.env.BROKER_URL}/publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      request_id,
-      group_id: "04",
-      timestamp,
-      url: property_url,
-      origin: 0,
-      operation: "BUY"
-    })
-  });
-
   ctx.body = { request_id, status: "PENDING" };
   ctx.status = 201;
 
+});
+
+// POST /appointments
+router.post("/", async (ctx) => {
+  const { request_id, group_id, property_url, reason, created_at} = ctx.request.body;
+
+  if (!request_id || !group_id || !created_at || !property_url || !reason) {
+    ctx.throw(400, "Missing required fields");
+  }
+
+  const appointment = await Appointment.findOne({ where: { request_id } });
+  if (!appointment) {
+    await Appointment.create({
+    request_id,
+    group_id,
+    property_url,
+    status: "PENDING",
+    reason,
+    created_at
+  });
+  }
+
+  ctx.body = {
+    message: "Appointment created",
+    request_id
+  };
+
+  ctx.status = 200;
 });
 
 // GET /appointments
@@ -100,6 +115,70 @@ router.get("/", async (ctx) => {
   }));
   ctx.status = 200;
 });
+
+// GET /appointments/all
+router.get("/all", async (ctx) => {
+  const appointments = await Appointment.findAll({
+    order: [["createdAt", "DESC"]]
+  });
+
+  ctx.body = appointments.map(a => ({
+    request_id: a.request_id,
+    user_id: a.user_id,
+    group_id: a.group_id,
+    property_url: a.property_url,
+    status: a.status,
+    reason: a.reason,
+    created_at: a.createdAt
+  }));
+
+  ctx.status = 200;
+});
+
+// POST /appointments/validate
+router.post("/validate", async (ctx) => {
+  const { request_id, status, reason, timestamp } = ctx.request.body;
+
+  if (!request_id || !status || !timestamp) {
+    ctx.throw(400, "Missing required fields");
+  }
+
+  const validStatuses = ["ACCEPTED", "REJECTED", "error", "OK"];
+  if (!validStatuses.includes(status)) {
+    ctx.throw(400, "Invalid status");
+  }
+
+  const appointment = await Appointment.findOne({ where: { request_id } });
+  if (!appointment) {
+    ctx.throw(404, "Appointment not found");
+  }
+
+  // Actualizar estado
+  appointment.status = status;
+  appointment.reason = reason || "No reason provided";
+  await appointment.save();
+
+  // Registrar evento
+  // await EventLog.create({
+  //   type: "VALIDATION_RECEIVED",
+  //   request_id,
+  //   group_id: appointment.group_id,
+  //   url: appointment.property_url,
+  //   status,
+  //   reason,
+  //   timestamp,
+  //   raw_payload: JSON.stringify(ctx.request.body)
+  // });
+
+  ctx.body = {
+    message: "Appointment updated",
+    request_id,
+    new_status: status
+  };
+  ctx.status = 200;
+});
+
+
 
 // GET /appointments/status/id
 router.get("/status/:request_id", async (ctx) => {
