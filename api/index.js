@@ -16,6 +16,18 @@ app.use(bodyParser({
 }));
 
 app.use(Logger());
+app.use(async(ctx, next) => {
+  try {
+    const userId = ctx.req.apiGateway?.event?.requestContext?.authorizer?.userId;
+    if (userId){
+      ctx.state.user = { userId : userId }
+    }
+  } catch (err) {
+    console.error("Error al obtener el userId:", err)
+  }
+  await next();
+});
+
 app.use(router.routes()).use(router.allowedMethods());
 
 db.sequelize.authenticate()

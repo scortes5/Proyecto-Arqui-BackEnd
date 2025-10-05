@@ -55,7 +55,7 @@ router.post("/buy", async (ctx) => {
   await Appointment.create({
     request_id,
     user_id,
-    group_id: "4",
+    group_id: "04",
     property_url,
     status: "PENDING",
     reason: "APPOINTMENT"
@@ -69,7 +69,7 @@ router.post("/buy", async (ctx) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       request_id,
-      group_id: "4",
+      group_id: "04",
       timestamp,
       url: property_url,
       origin: 0,

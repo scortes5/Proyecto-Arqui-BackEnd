@@ -8,16 +8,15 @@ const { Wallet } = require('../models')
 // -------------------------------------- METODO POST ---------------------------------------------
 // /wallet/topup - OK
 router.post("/topup", async (ctx) => {
-  // const { id: userId } = ctx.state.user;
-  const user_id = ctx.request.body.user_id;
-  const amount = ctx.request.body.amount;
+  const { userId } = ctx.state.user;
+  const {amount} = ctx.request.body;
 
   if (!amount || typeof amount !== "number") {
     ctx.throw(400, "Invalid amount");
   }
 
   const [wallet, created] = await Wallet.findOrCreate({
-    where: { user_id: user_id },
+    where: { userId: userId },
     defaults: { balance: amount }
   });
 
@@ -30,7 +29,7 @@ router.post("/topup", async (ctx) => {
   }
 
   ctx.body = {
-    user_id: user_id,
+    userId: userId,
     new_balance: wallet.balance
   };
   ctx.status = 200;
@@ -42,19 +41,19 @@ router.post("/topup", async (ctx) => {
 // -------------------------------------- METODO GET ---------------------------------------------
 // wallet/balance - OK
 router.get("/balance", async (ctx) => {
-  const { user_id } = ctx.request.body;
+  const { userId } = ctx.state.user;
 
-  if (!user_id || typeof user_id !== "string") {
-    ctx.throw(400, "Invalid or missing user_id");
+  if (!userId || typeof userId !== "string") {
+    ctx.throw(400, "Invalid or missing userId");
   }
 
   const [wallet] = await Wallet.findOrCreate({
-    where: { user_id },
+    where: { userId },
     defaults: { balance: 0 }
   });
 
   ctx.body = { 
-    user_id: user_id, 
+    userId: userId, 
     balance: wallet.balance };
 
   ctx.status = 200;
