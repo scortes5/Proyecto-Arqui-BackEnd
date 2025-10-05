@@ -2,6 +2,7 @@ services:
   api:
     build: ./api
     container_name: api-service
+    restart: always
     ports:
       - "3000:3000"
     environment:
@@ -18,6 +19,7 @@ services:
   mqtt:
     build: ./mqtt
     container_name: mqtt-service
+    restart: always
     ports:
       - "1883:1883"
     env_file:
@@ -28,6 +30,7 @@ services:
   db:
     image: postgres:15
     container_name: postgres-db
+    restart: always
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -39,3 +42,4 @@ services:
 
 volumes:
   db_data:
+

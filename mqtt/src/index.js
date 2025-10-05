@@ -1,51 +1,83 @@
 require('dotenv').config();
+const mqtt = require('mqtt');
+const MQTT_CONFIG = require('./config/config');
+const { handlePropertyInfo } = require('./handlers/onInfo');
+const { handlePropertyRequest } = require('./handlers/onRequest');
+const { handlePropertyValidation } = require('./handlers/onValidation');
+const { setMqttClient } = require('./services/publisher');
 
-const brokerUrl = `mqtt://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`;
-const mqtt = require('mqtt')
-const options = {
-  // Clean session
-  clean: true,
-  connectTimeout: 4000,
-  // Authentication
-  clientId: process.env.MQTT_CLIENT_ID,
-  username: process.env.MQTT_USERNAME,
-  password: process.env.MQTT_PASSWORD
-}
-const client  = mqtt.connect(brokerUrl, options)
+let client;
 
-client.on('connect', function () {
-  console.log('Connected')
-  // Subscribe to a topic
-  client.subscribe(process.env.MQTT_TOPIC, function (err) {
-    if (!err) {
-      // Publish a message to a topic
-      client.publish('test', 'Hello mqtt')
-    }
-  })
-})
+function connectToBroker() {
+  client = mqtt.connect(MQTT_CONFIG.brokerUrl, MQTT_CONFIG.options);
 
+  // Hacer el cliente disponible para el publisher
+  setMqttClient(client);
 
-client.on('message', async (topic, message) => {
-  try {
-    const raw = message.toString();
-    const parsed = JSON.parse(raw);
-
-    const response = await fetch(`${process.env.API_URL}/properties`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(parsed)
+  client.on('connect', () => {
+    console.log('🟢 Conectado al broker MQTT');
+    console.log(`Broker: ${MQTT_CONFIG.brokerUrl}`);
+    console.log(`Cliente ID: ${MQTT_CONFIG.options.clientId}`);
+    
+    // Suscribirse a todos los canales necesarios (RF06)
+    Object.entries(MQTT_CONFIG.channels).forEach(([name, channel]) => {
+      client.subscribe(channel, (err) => {
+        if (err) {
+          console.error(`❌ Error suscribiéndose a ${channel}:`, err);
+        } else {
+          console.log(`Suscrito a ${channel}`);
+        }
+      });
     });
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API responded with ${response.status}: ${errorText}`);
+  client.on('message', async (topic, message) => {
+    try {
+      // Rutear según el canal
+      switch (topic) {
+        case MQTT_CONFIG.channels.PROPERTIES_INFO:
+          await handlePropertyInfo(message);
+          break;
+        case MQTT_CONFIG.channels.PROPERTIES_REQUESTS:
+          await handlePropertyRequest(message);
+          break;
+        case MQTT_CONFIG.channels.PROPERTIES_VALIDATION:
+          await handlePropertyValidation(message);
+          break;
+        default:
+          console.log(`Mensaje en canal no manejado: ${topic}`);
+      }
+    } catch (err) {
+      console.error('❌ Error procesando mensaje:', err);
     }
+  });
 
-    const result = await response.json();
-    console.log(`🏠 Propiedad enviada a la API: id: ${result.id}. ${result.name}`);
-  } catch (err) {
-    console.error('Error al enviar propiedad a la API:', err.message);
+  client.on('error', (err) => {
+    console.error('❌ Error de conexión MQTT:', err);
+  });
+
+  client.on('offline', () => {
+    console.log('❌ Cliente MQTT offline');
+  });
+
+  client.on('reconnect', () => {
+    console.log('Reconectando al broker...');
+  });
+}
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\nCerrando conexión MQTT...');
+  if (client) {
+    client.end(false, () => {
+      console.log('Desconectado del broker');
+      process.exit(0);
+    });
   }
 });
 
+// Iniciar el servicio
+console.log('🚀 Iniciando servicio MQTT...');
+connectToBroker();
 
+module.exports = { client };
