@@ -36,8 +36,14 @@ router.post("/buy", async (ctx) => {
   if (currency === "UF") {
     const ufResponse = await fetch("https://mindicador.cl/api/uf");
     const ufData = await ufResponse.json();
-    const ufValue = parseFloat(ufData.uf.valor);
-    if (isNaN(ufValue)) ctx.throw(500, "Fallo Conversion UF a CLP");
+
+    if (!ufData.serie?.length) {
+      ctx.throw(500, "Fallo conversión UF: sin datos válidos desde mindicador.cl");
+    }
+
+    const ufValue = parseFloat(ufData.serie[0].valor);
+    if (isNaN(ufValue)) ctx.throw(500, "Fallo conversión UF a CLP");
+
     finalPrice = price * ufValue;
   }
 
