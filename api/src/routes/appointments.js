@@ -64,7 +64,7 @@ router.post("/buy", async (ctx) => {
   if (existing) ctx.throw(409, "Ya tienes una invitacion pendiente para esta propiedad");
 
   const request_id = uuidv4();
-  
+
   await Appointment.create({
     request_id,
     user_id: userId,
@@ -74,6 +74,8 @@ router.post("/buy", async (ctx) => {
     reason: "APPOINTMENT"
   });
 
+  
+
   wallet.balance -= cost;
   property.reservations -= 1;
   await property.save();
@@ -82,6 +84,39 @@ router.post("/buy", async (ctx) => {
   ctx.body = { request_id, status: "PENDING" };
   ctx.status = 201;
 
+});
+
+// POST /appointments/validate
+router.post("/validate", async (ctx) => {
+  const { request_id, status, reason, timestamp } = ctx.request.body;
+
+  if (!request_id || !status || !timestamp) {
+    ctx.throw(400, "Request Body Incompleto");
+  }
+
+  const validStatuses = ["ACCEPTED", "REJECTED", "error", "OK"];
+  if (!validStatuses.includes(status)) {
+    ctx.throw(400, "Status Invalido");
+  }
+
+  const appointment = await Appointment.findOne({ where: { request_id } });
+  if (!appointment) {
+    ctx.throw(404, "Visita no encontrada");
+  }
+
+  // const property = await Property.findOne({ where: { url: appointment.property_url } });
+
+  // Actualizar estado
+  appointment.status = status;
+  appointment.reason = reason || "-";
+  await appointment.save();
+
+  ctx.body = {
+    message: "Visita Actualizada",
+    request_id,
+    new_status: status
+  };
+  ctx.status = 200;
 });
 
 // POST /appointments/requests
@@ -147,49 +182,6 @@ router.get("/all", async (ctx) => {
     created_at: a.createdAt
   }));
 
-  ctx.status = 200;
-});
-
-// POST /appointments/validate
-router.post("/validate", async (ctx) => {
-  const { request_id, status, reason, timestamp } = ctx.request.body;
-
-  if (!request_id || !status || !timestamp) {
-    ctx.throw(400, "Request Body Incompleto");
-  }
-
-  const validStatuses = ["ACCEPTED", "REJECTED", "error", "OK"];
-  if (!validStatuses.includes(status)) {
-    ctx.throw(400, "Status Invalido");
-  }
-
-  const appointment = await Appointment.findOne({ where: { request_id } });
-  if (!appointment) {
-    ctx.throw(404, "Visita no encontrada");
-  }
-
-  // Actualizar estado
-  appointment.status = status;
-  appointment.reason = reason || "-";
-  await appointment.save();
-
-  // Registrar evento
-  // await EventLog.create({
-  //   type: "VALIDATION_RECEIVED",
-  //   request_id,
-  //   group_id: appointment.group_id,
-  //   url: appointment.property_url,
-  //   status,
-  //   reason,
-  //   timestamp,
-  //   raw_payload: JSON.stringify(ctx.request.body)
-  // });
-
-  ctx.body = {
-    message: "Visita Actualizada",
-    request_id,
-    new_status: status
-  };
   ctx.status = 200;
 });
 
