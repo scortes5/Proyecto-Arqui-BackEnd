@@ -4,7 +4,8 @@ const MQTT_CONFIG = require('./config/config');
 const { handlePropertyInfo } = require('./handlers/onInfo');
 const { handlePropertyRequest } = require('./handlers/onRequest');
 const { handlePropertyValidation } = require('./handlers/onValidation');
-const { setMqttClient } = require('./services/publisher');
+const { setMqttClient, publishPendingAppointments } = require('./services/publisher');
+
 
 let client;
 
@@ -29,6 +30,11 @@ function connectToBroker() {
         }
       });
     });
+
+    // Al iniciar el servicio MQTT
+    setInterval(() => {
+      publishPendingAppointments();
+    }, 10_000); // cada 10 segundos, por ejemplo
   });
 
   client.on('message', async (topic, message) => {

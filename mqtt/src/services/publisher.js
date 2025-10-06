@@ -1,6 +1,52 @@
 const { fibonacciRetry } = require('../utils/retry');
 
+
+
 let mqttClient = null;
+
+async function getPendingAppointments() {
+  console.log(process.env.API_URL);
+  const response = await fetch(`${process.env.API_URL}/appointments/all`);
+  
+  if (!response.ok) {
+    throw new Error(`Error consultando appointments: ${response.status}`);
+  }
+
+  const appointments = await response.json();
+  
+  // Filtrar solo las que están pendientes
+  return appointments.filter(a => a.status === 'PENDING');
+}
+
+async function publishPendingAppointments() {
+  if (!isClientReady()) {
+    console.warn('MQTT client no listo. No se pueden publicar pendientes.');
+    return;
+  }
+
+  try {
+    const pendingRequests = await getPendingAppointments();
+    console.log(`Se encontraron ${pendingRequests.length} solicitudes pendientes.`);
+
+    for (const request of pendingRequests) {
+      try {
+        await publishPurchaseRequest({
+          request_id: request.request_id,
+          group_id: request.group_id,
+          url: request.property_url,
+          timestamp: request.created_at,
+          origin: 0,
+          operation: 'BUY'
+        });
+      } catch (err) {
+        console.error(`Error publicando request ${request.request_id}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('Error sincronizando pendientes:', err.message);
+  }
+}
+
 
 /**
  * Establece el cliente MQTT que se usará para publicar
@@ -86,5 +132,6 @@ module.exports = {
   publishPurchaseRequest,
   setMqttClient,
   isClientReady,
-  getClientStatus
+  getClientStatus,
+  publishPendingAppointments
 };
