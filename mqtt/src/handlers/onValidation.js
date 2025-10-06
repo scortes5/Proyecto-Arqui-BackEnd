@@ -40,11 +40,6 @@ async function handlePropertyValidation(message) {
       if (!response.ok) {
         const errorText = await response.text();
         
-        // Si es 404 (appointment no encontrado), no reintentar
-        if (response.status === 404) {
-          console.log(`Appointment ${validation.request_id} no encontrado, probablemente no era nuestro`);
-          return { skipped: true };
-        }
         
         throw new Error(`API respondió con ${response.status}: ${errorText}`);
       }
