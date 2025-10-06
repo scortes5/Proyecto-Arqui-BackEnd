@@ -87,9 +87,9 @@ router.post("/buy", async (ctx) => {
 
 // POST /appointments/requests
 router.post("/requests", async (ctx) => {
-  const { request_id, group_id, property_url, reason, created_at} = ctx.request.body;
+  const { request_id, group_id, url, created_at} = ctx.request.body;
 
-  if (!request_id || !group_id || !created_at || !property_url || !reason) {
+  if (!request_id || !group_id || !created_at || !url ) {
     ctx.throw(400, "Request Body Incompleto");
   }
 
@@ -99,9 +99,9 @@ router.post("/requests", async (ctx) => {
     await Appointment.create({
     request_id,
     group_id,
-    property_url,
+    property_url: url,
     status: "PENDING",
-    reason
+    reason: "APPOINTMENT"
   });
   }
 
