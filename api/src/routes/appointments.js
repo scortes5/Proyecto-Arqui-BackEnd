@@ -47,7 +47,7 @@ router.post("/buy", async (ctx) => {
     finalPrice = price * ufValue;
   }
 
-  const cost = Math.floor(price * 0.1);
+  const cost = Math.floor(finalPrice * 0.1);
 
   const wallet = await Wallet.findOne({ where: { user_id: userId } });
   if (!wallet || wallet.balance < cost) {
