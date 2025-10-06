@@ -64,8 +64,7 @@ router.post("/buy", async (ctx) => {
   if (existing) ctx.throw(409, "Ya tienes una invitacion pendiente para esta propiedad");
 
   const request_id = uuidv4();
-  const timestamp = new Date().toISOString();
-
+  
   await Appointment.create({
     request_id,
     user_id: userId,
@@ -87,9 +86,9 @@ router.post("/buy", async (ctx) => {
 
 // POST /appointments/requests
 router.post("/requests", async (ctx) => {
-  const { request_id, group_id, url, created_at} = ctx.request.body;
+  const { request_id, group_id, url, timestamp} = ctx.request.body;
 
-  if (!request_id || !group_id || !created_at || !url ) {
+  if (!request_id || !group_id || !timestamp || !url ) {
     ctx.throw(400, "Request Body Incompleto");
   }
 
