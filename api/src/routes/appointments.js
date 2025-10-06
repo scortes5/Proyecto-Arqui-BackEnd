@@ -85,8 +85,8 @@ router.post("/buy", async (ctx) => {
 
 });
 
-// POST /appointments
-router.post("/", async (ctx) => {
+// POST /appointments/requests
+router.post("/requests", async (ctx) => {
   const { request_id, group_id, property_url, reason, created_at} = ctx.request.body;
 
   if (!request_id || !group_id || !created_at || !property_url || !reason) {
@@ -94,6 +94,7 @@ router.post("/", async (ctx) => {
   }
 
   const appointment = await Appointment.findOne({ where: { request_id } });
+
   if (!appointment) {
     await Appointment.create({
     request_id,
