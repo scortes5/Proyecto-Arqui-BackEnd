@@ -29,3 +29,9 @@ exports.config = {
 };
 ````
 * Al incicio de **index.js**, importar NewRelic con ``require('newrelic');`` en la primera línea.
+* Deberían salir ahora en NewRelic las métricas para los contenedores.
+## Capturas
+
+![Monitoreo1](./Monitoreo1.png)
+![Monitoreo2](./Monitoreo2.png)
+![Monitoreo3](./Monitoreo3.png)
