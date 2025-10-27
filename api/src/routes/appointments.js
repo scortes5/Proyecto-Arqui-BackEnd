@@ -1,15 +1,16 @@
 const Router = require("@koa/router");
 const router = new Router();
-const { Op } = require('sequelize');
-const { Appointment } = require('../models');
+const { Op } = require("sequelize");
+const { Appointment } = require("../models");
 const { Wallet } = require("../models");
 const { Property } = require("../models");
 const { v4: uuidv4 } = require("uuid");
+const { tx } = require("../utils/trx");
 
 // POST /appointments/buy
 router.post("/buy", async (ctx) => {
   const { userId } = ctx.state.user;
-  const {property_id } = ctx.request.body;
+  const { property_id } = ctx.request.body;
 
   if (!property_id) {
     ctx.throw(400, "Id Propiedad faltante");
@@ -38,7 +39,10 @@ router.post("/buy", async (ctx) => {
     const ufData = await ufResponse.json();
 
     if (!ufData.serie?.length) {
-      ctx.throw(500, "Fallo conversión UF: sin datos válidos desde mindicador.cl");
+      ctx.throw(
+        500,
+        "Fallo conversión UF: sin datos válidos desde mindicador.cl"
+      );
     }
 
     const ufValue = parseFloat(ufData.serie[0].valor);
@@ -58,10 +62,11 @@ router.post("/buy", async (ctx) => {
     where: {
       user_id: userId,
       property_url,
-      status: { [Op.in]: ["PENDING", "ACCEPTED"] }
-    }
+      status: { [Op.in]: ["PENDING", "ACCEPTED"] },
+    },
   });
-  if (existing) ctx.throw(409, "Ya tienes una invitacion pendiente para esta propiedad");
+  if (existing)
+    ctx.throw(409, "Ya tienes una invitacion pendiente para esta propiedad");
 
   const request_id = uuidv4();
 
@@ -71,10 +76,8 @@ router.post("/buy", async (ctx) => {
     group_id: "04",
     property_url,
     status: "PENDING",
-    reason: "APPOINTMENT"
+    reason: "APPOINTMENT",
   });
-
-  
 
   wallet.balance -= cost;
   property.reservations -= 1;
@@ -83,7 +86,6 @@ router.post("/buy", async (ctx) => {
 
   ctx.body = { request_id, status: "PENDING" };
   ctx.status = 201;
-
 });
 
 // POST /appointments/validate
@@ -114,16 +116,16 @@ router.post("/validate", async (ctx) => {
   ctx.body = {
     message: "Visita Actualizada",
     request_id,
-    new_status: status
+    new_status: status,
   };
   ctx.status = 200;
 });
 
 // POST /appointments/requests
 router.post("/requests", async (ctx) => {
-  const { request_id, group_id, url, timestamp} = ctx.request.body;
+  const { request_id, group_id, url, timestamp } = ctx.request.body;
 
-  if (!request_id || !group_id || !timestamp || !url ) {
+  if (!request_id || !group_id || !timestamp || !url) {
     ctx.throw(400, "Request Body Incompleto");
   }
 
@@ -131,17 +133,17 @@ router.post("/requests", async (ctx) => {
 
   if (!appointment) {
     await Appointment.create({
-    request_id,
-    group_id,
-    property_url: url,
-    status: "PENDING",
-    reason: "APPOINTMENT"
-  });
+      request_id,
+      group_id,
+      property_url: url,
+      status: "PENDING",
+      reason: "APPOINTMENT",
+    });
   }
 
   ctx.body = {
     message: "Reserva Creada",
-    request_id
+    request_id,
   };
 
   ctx.status = 200;
@@ -153,15 +155,15 @@ router.get("/", async (ctx) => {
 
   const appointments = await Appointment.findAll({
     where: { user_id: userId },
-    order: [["createdAt", "DESC"]]
+    order: [["createdAt", "DESC"]],
   });
 
-  ctx.body = appointments.map(a => ({
+  ctx.body = appointments.map((a) => ({
     request_id: a.request_id,
     property_url: a.property_url,
     status: a.status,
     reason: a.reason,
-    created_at: a.createdAt
+    created_at: a.createdAt,
   }));
   ctx.status = 200;
 });
@@ -169,17 +171,17 @@ router.get("/", async (ctx) => {
 // GET /appointments/all
 router.get("/all", async (ctx) => {
   const appointments = await Appointment.findAll({
-    order: [["createdAt", "DESC"]]
+    order: [["createdAt", "DESC"]],
   });
 
-  ctx.body = appointments.map(a => ({
+  ctx.body = appointments.map((a) => ({
     request_id: a.request_id,
     user_id: a.user_id,
     group_id: a.group_id,
     property_url: a.property_url,
     status: a.status,
     reason: a.reason,
-    created_at: a.createdAt
+    created_at: a.createdAt,
   }));
 
   ctx.status = 200;
@@ -191,7 +193,7 @@ router.get("/status/:request_id", async (ctx) => {
   const { userId } = ctx.state.user;
 
   const appointment = await Appointment.findOne({
-    where: { request_id, user_id: userId }
+    where: { request_id, user_id: userId },
   });
 
   if (!appointment) {
@@ -201,12 +203,183 @@ router.get("/status/:request_id", async (ctx) => {
   ctx.body = {
     request_id: appointment.request_id,
     status: appointment.status,
-    reason: appointment.reason
+    reason: appointment.reason,
   };
   ctx.status = 200;
 });
 
+///////////////Rutas webpay//////////////////////
+// POST /appointments/buywebpay
+
+router.post("/buywebpay", async (ctx) => {
+  console.log("=== /buywebpay called ===");
+  console.log("Headers:", ctx.request.headers);
+  console.log("Body:", ctx.request.body);
+  console.log("ctx.state.user:", ctx.state.user);
+
+  try {
+    const { userId } = ctx.state.user;
+    const { property_id } = ctx.request.body;
+
+    if (!property_id) ctx.throw(400, "Id Propiedad faltante");
+    if (!userId) ctx.throw(400, "Id Usuario faltante");
+
+    // Fetch property
+    const property = await Property.findByPk(property_id);
+    if (!property) ctx.throw(404, "Propiedad no encontrada");
+    console.log("Property fetched:", property.toJSON());
+
+    const property_url = property.url.split("#")[0];
+
+    // Check for existing appointment
+    const existing = await Appointment.findOne({
+      where: {
+        user_id: userId,
+        property_url,
+        status: { [Op.in]: ["PENDING", "ACCEPTED"] },
+      },
+    });
+
+    if (existing) {
+      console.log("Conflict detected: existing appointment");
+      ctx.throw(409, "Ya tienes una invitación pendiente para esta propiedad");
+    }
+
+    // Compute price safely
+    let finalPrice = property.price;
+
+    if (property.currency === "UF") {
+      let ufValue = 1;
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+        const ufResponse = await fetch("https://mindicador.cl/api/uf", {
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        const ufData = await ufResponse.json();
+        if (!ufData.serie?.length) throw new Error("No UF data");
+        ufValue = parseFloat(ufData.serie[0].valor);
+      } catch (err) {
+        console.error("Error fetching UF:", err);
+        ctx.throw(500, "Fallo conversión UF");
+      }
+
+      finalPrice = property.price * ufValue;
+    }
+
+    const cost = Math.floor(finalPrice * 0.1);
+
+    // Create appointment
+    const request_id = uuidv4();
+    const newAppointment = await Appointment.create({
+      request_id,
+      user_id: userId,
+      group_id: "04",
+      property_url,
+      status: "PENDING",
+      reason: "APPOINTMENT",
+    });
+
+    const buyOrder = request_id.slice(0, 26);
+
+    // Create transaction
+    let trx;
+    try {
+      trx = await tx.create(
+        buyOrder,
+        "test-iic2173",
+        cost,
+        process.env.REDIRECT_URL || "http://localhost:5173/completed-purchase"
+      );
+    } catch (err) {
+      console.error("Error creating WebPay transaction:", err);
+      ctx.throw(500, "Fallo al crear transacción Webpay");
+    }
+
+    await Appointment.update(
+      { deposit_token: trx.token },
+      { where: { request_id: newAppointment.request_id } }
+    );
+
+    // Response
+    ctx.status = 201;
+    ctx.body = {
+      request_id,
+      status: "PENDING",
+      deposit_token: trx.token,
+      url: trx.url,
+    };
+
+    console.log("BuyWebpay response sent:", ctx.body);
+  } catch (err) {
+    console.error("Error in /buywebpay:", err);
+    // Aseguramos JSON en cualquier error
+    ctx.status = err.status || 500;
+    ctx.body = { error: err.message || "Error interno del servidor" };
+  }
+});
+
+// POST /appointments/validatewebpay
+router.post("/validatewebpay", async (ctx) => {
+  const { ws_token } = ctx.request.body;
+
+  if (!ws_token || ws_token === "") {
+    ctx.body = { message: "Transacción anulada por el usuario" };
+    ctx.status = 200;
+    return;
+  }
+
+  // Confirmar transacción en Webpay
+  const confirmedTx = await tx.commit(ws_token);
+
+  // Buscar la cita asociada a este token
+  const appointment = await Appointment.findOne({
+    where: { deposit_token: ws_token },
+  });
+
+  if (!appointment) {
+    ctx.throw(404, "Cita no encontrada para el token proporcionado");
+  }
+
+  if (confirmedTx.response_code != 0) {
+    // Transacción rechazada
+    appointment.status = "REJECTED";
+    appointment.reason = "Pago rechazado por Webpay";
+    await appointment.save();
+
+    ctx.body = {
+      message: "Transacción rechazada",
+      request_id: appointment.request_id,
+      property: appointment.property_url,
+    };
+    ctx.status = 200;
+    return;
+  }
+
+  // Transacción aprobada
+  appointment.status = "ACCEPTED";
+  appointment.reason = "Pago confirmado por Webpay";
+  await appointment.save();
+
+  // Actualizar propiedad (descontar reserva)
+  const property = await Property.findOne({
+    where: { url: appointment.property_url },
+  });
+
+  if (property && property.reservations > 0) {
+    property.reservations -= 1;
+    await property.save();
+  }
+
+  ctx.status = 200;
+  ctx.body = {
+    message: "Transacción aceptada y cita confirmada",
+    request_id: appointment.request_id,
+    property: appointment.property_url,
+  };
+});
 
 module.exports = router;
-
-

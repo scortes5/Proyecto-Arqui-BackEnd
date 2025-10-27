@@ -15,6 +15,8 @@ services:
       - .env
     depends_on:
       - db
+    volumes:
+      - ./api:/usr/src/app
 
   mqtt:
     build: ./mqtt
@@ -42,4 +44,3 @@ services:
 
 volumes:
   db_data:
-

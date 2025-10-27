@@ -17,6 +17,8 @@ app.use(bodyParser({
 
 app.use(Logger());
 
+app.use(cors())
+
 app.use(async (ctx, next) => {
   try {
     const userId = ctx.request.headers["x-user-id"];
