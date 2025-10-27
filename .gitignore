@@ -5,3 +5,19 @@ node_modules/
 .DS_Store
 .vscode/
 api/src/config/config.js
+
+# Archivos sensibles
+.env.local
+.env.production
+*.pem
+trust-*.json
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Scripts temporales (si creas alguno)
+scripts/test-*.sh

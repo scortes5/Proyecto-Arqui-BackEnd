@@ -1,0 +1,44 @@
+services:
+  api:
+    image: ${API_IMAGE}
+    container_name: api-service
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_USER=${DB_USERNAME}
+      - DB_PASS=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  mqtt:
+    image: ${MQTT_IMAGE}
+    container_name: mqtt-service
+    restart: always
+    ports:
+      - "1883:1883"
+    env_file:
+      - .env
+    depends_on:
+      - api
+
+  db:
+    image: postgres:15
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
