@@ -105,7 +105,7 @@ jobs:
           echo "Creating deployment..."
           
           deployment_id=$(aws deploy create-deployment \
-            --application-name ${{ secrets.CODEDEPLOY_APPLICATION_NAME }} \
+            --application-name ${{ secrets.CODEDEPOLY_APPLICATION_NAME }} \
             --deployment-group-name ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }} \
             --github-location repository=${{ github.repository }},commitId=${{ github.sha }} \
             --ignore-application-stop-failures \
