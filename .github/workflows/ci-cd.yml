@@ -124,6 +124,8 @@ jobs:
           zip -r ../deployment-${{ github.sha }}.zip .
           cd ..
           
+          ls -lh deployment-${{ github.sha }}.zip
+          
           echo "✅ Deployment package created"
       
       - name: Upload to S3
@@ -141,42 +143,126 @@ jobs:
         run: |
           echo "Creating CodeDeploy deployment..."
           
-          deployment_id=$(aws deploy create-deployment \
+          # Crear deployment y capturar todo el output
+          deployment_output=$(aws deploy create-deployment \
             --application-name ${{ secrets.CODEDEPLOY_APPLICATION_NAME }} \
             --deployment-group-name ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }} \
             --s3-location bucket=${{ secrets.S3_DEPLOYMENT_BUCKET }},key=grupo-XX-backend/deployment-${{ github.sha }}.zip,bundleType=zip \
             --description "Deployment of commit ${{ github.sha }}" \
-            --region ${{ env.AWS_REGION }} \
-            --query 'deploymentId' \
-            --output text)
+            --region ${{ env.AWS_REGION }} 2>&1)
+          
+          echo "AWS Response: $deployment_output"
+          
+          # Extraer el deployment ID del output JSON
+          deployment_id=$(echo "$deployment_output" | grep -o '"deploymentId": "[^"]*"' | cut -d'"' -f4)
+          
+          if [ -z "$deployment_id" ]; then
+            echo "❌ Failed to extract deployment ID"
+            echo "Full output: $deployment_output"
+            exit 1
+          fi
           
           echo "deployment_id=$deployment_id" >> $GITHUB_OUTPUT
           echo "✅ Deployment created: $deployment_id"
+          echo "🔗 Console: https://console.aws.amazon.com/codesuite/codedeploy/deployments/$deployment_id?region=${{ env.AWS_REGION }}"
       
       - name: Wait for deployment
         run: |
-          echo "Waiting for deployment to complete..."
+          DEPLOYMENT_ID="${{ steps.deploy.outputs.deployment_id }}"
           
-          aws deploy wait deployment-successful \
-            --deployment-id ${{ steps.deploy.outputs.deployment_id }} \
-            --region ${{ env.AWS_REGION }} \
-            || true
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "❌ Deployment ID is empty"
+            exit 1
+          fi
           
-          echo "Deployment process finished"
+          echo "Waiting for deployment $DEPLOYMENT_ID to complete..."
+          echo "This may take several minutes..."
+          
+          # Loop manual en lugar de aws deploy wait
+          MAX_ATTEMPTS=80  # 80 * 15s = 20 minutos
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            
+            # Obtener el estado actual
+            STATUS=$(aws deploy get-deployment \
+              --deployment-id "$DEPLOYMENT_ID" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'deploymentInfo.status' \
+              --output text 2>&1)
+            
+            echo "[$ATTEMPT/$MAX_ATTEMPTS] Status: $STATUS"
+            
+            case "$STATUS" in
+              "Succeeded")
+                echo "✅ Deployment succeeded!"
+                exit 0
+                ;;
+              "Failed")
+                echo "❌ Deployment failed"
+                aws deploy get-deployment \
+                  --deployment-id "$DEPLOYMENT_ID" \
+                  --region ${{ env.AWS_REGION }} \
+                  --query 'deploymentInfo.errorInformation'
+                exit 1
+                ;;
+              "Stopped")
+                echo "⏹️ Deployment was stopped"
+                exit 1
+                ;;
+              "Created"|"Queued"|"InProgress")
+                # Todavía en progreso
+                sleep 15
+                ;;
+              *)
+                echo "⚠️ Unknown status: $STATUS"
+                sleep 15
+                ;;
+            esac
+          done
+          
+          echo "⏱️ Deployment timeout after 20 minutes"
+          exit 1
       
       - name: Get deployment status
         if: always()
         run: |
-          status=$(aws deploy get-deployment \
-            --deployment-id ${{ steps.deploy.outputs.deployment_id }} \
+          DEPLOYMENT_ID="${{ steps.deploy.outputs.deployment_id }}"
+          
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "⚠️ No deployment ID available"
+            exit 0
+          fi
+          
+          echo "📊 Final Deployment Status:"
+          echo "=========================="
+          
+          STATUS=$(aws deploy get-deployment \
+            --deployment-id "$DEPLOYMENT_ID" \
             --region ${{ env.AWS_REGION }} \
             --query 'deploymentInfo.status' \
             --output text)
           
-          echo "Deployment status: $status"
-          echo "Check details at: https://console.aws.amazon.com/codesuite/codedeploy/deployments/${{ steps.deploy.outputs.deployment_id }}?region=${{ env.AWS_REGION }}"
+          echo "Status: $STATUS"
+          echo "Deployment ID: $DEPLOYMENT_ID"
+          echo ""
+          echo "🔗 View details:"
+          echo "https://console.aws.amazon.com/codesuite/codedeploy/deployments/$DEPLOYMENT_ID?region=${{ env.AWS_REGION }}"
           
-          if [ "$status" != "Succeeded" ]; then
-            echo "⚠️ Deployment did not succeed"
+          if [ "$STATUS" != "Succeeded" ]; then
+            echo ""
+            echo "❌ Deployment did not succeed"
+            echo "Check the AWS Console for detailed logs"
+            
+            # Mostrar error si existe
+            aws deploy get-deployment \
+              --deployment-id "$DEPLOYMENT_ID" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'deploymentInfo.errorInformation' \
+              --output json 2>/dev/null || true
+            
             exit 1
           fi
+          
+          echo "✅ Deployment completed successfully!"
