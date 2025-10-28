@@ -109,11 +109,12 @@ jobs:
           echo "Repo: ${{ github.repository }}"
           echo "SHA: ${{ github.sha }}"
           
+          export AWS_CODE_DEPLOY_GITHUB_TOKEN=${{ secrets.GH_TOKEN }}
+    
           deployment_id=$(aws deploy create-deployment \
             --application-name ${{ secrets.CODEDEPLOY_APPLICATION_NAME }} \
             --deployment-group-name ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }} \
             --github-location repository=${{ github.repository }},commitId=${{ github.sha }} \
-            --github-token ${{ secrets.GH_TOKEN }} \
             --region us-east-2 \
             --ignore-application-stop-failures \
             --description "Deployment of commit ${{ github.sha }}" \
