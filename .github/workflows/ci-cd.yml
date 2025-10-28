@@ -108,6 +108,7 @@ jobs:
             --application-name ${{ secrets.CODEDEPLOY_APPLICATION_NAME }} \
             --deployment-group-name ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }} \
             --github-location repository=${{ github.repository }},commitId=${{ github.sha }} \
+            --region us-east-2 \
             --ignore-application-stop-failures \
             --description "Deployment of commit ${{ github.sha }}" \
             --query 'deploymentId' \
