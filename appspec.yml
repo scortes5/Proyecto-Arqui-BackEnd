@@ -3,7 +3,7 @@ os: linux
 
 files:
   - source: /
-    destination: /home/ec2-user/app
+    destination: /home/ubuntu/app
     overwrite: true
 
 hooks:
@@ -15,14 +15,14 @@ hooks:
   ApplicationStop:
     - location: scripts/stop_application.sh
       timeout: 300
-      runas: ec2-user
+      runas: ubuntu
   
   ApplicationStart:
     - location: scripts/start_application.sh
       timeout: 300
-      runas: ec2-user
+      runas: ubuntu
   
   ValidateService:
     - location: scripts/validate_service.sh
       timeout: 300
-      runas: ec2-user
+      runas: ubuntu

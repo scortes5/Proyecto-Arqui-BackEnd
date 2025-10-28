@@ -3,7 +3,7 @@ set -e
 
 echo "=== Stopping Application ==="
 
-cd /home/ec2-user/app
+cd /home/ubuntu/app
 
 # Detener solo api y mqtt, mantener db corriendo
 if [ -f docker-compose.prod.yml ]; then
