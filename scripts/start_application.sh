@@ -3,7 +3,7 @@ set -e
 
 echo "=== Starting Application ==="
 
-cd /home/ec2-user/app
+cd /home/ubuntu/app
 
 # Cargar variables de entorno
 if [ -f .env ]; then
