@@ -131,7 +131,11 @@ jobs:
       - name: Upload to S3
         run: |
           echo "Uploading to S3..."
-          echo "→ aws s3 cp deployment-${{ github.sha }}.zip s3://${{ secrets.S3_DEPLOYMENT_BUCKET }}/grupo-XX-backend/deployment-${{ github.sha }}.zip --region ${{ env.AWS_REGION }}"
+          echo "S3 bucket secret (raw):"
+          printf '%q\n' "${{ secrets.S3_DEPLOYMENT_BUCKET }}"
+          echo ""
+          echo "Length of secret:"
+          echo -n "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | wc -c
           aws s3 cp deployment-${{ github.sha }}.zip s3://${{ secrets.S3_DEPLOYMENT_BUCKET }}/grupo-04-backend/deployment-${{ github.sha }}.zip --region ${{ env.AWS_REGION }}
           echo "✅ Package uploaded to S3"
       
