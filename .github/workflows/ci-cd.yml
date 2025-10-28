@@ -130,13 +130,15 @@ jobs:
       
       - name: Upload to S3
         run: |
-          echo "Uploading to S3..."
-          echo "S3 bucket (raw):"
-          echo "${{ secrets.S3_DEPLOYMENT_BUCKET }}"
-          echo "Length:"
-          echo -n "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | wc -c
-          BUCKET="$(echo "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | tr -d '[:space:]')"
-          aws s3 cp deployment-${{ github.sha }}.zip s3://$BUCKET/grupo-04-backend/deployment-${{ github.sha }}.zip --region ${{ env.AWS_REGION }}
+          echo "=== Debug Info ==="
+          # Verificar el archivo existe
+          ls -la deployment-${{ github.sha }}.zip
+          
+          # Probar con el nombre directo del bucket (sin secret)
+          aws s3 cp deployment-${{ github.sha }}.zip \
+            s3://deploy-bucket-arquisis/grupo-04-backend/deployment-${{ github.sha }}.zip \
+            --region us-east-2
+          
           echo "✅ Package uploaded to S3"
       
       - name: Create CodeDeploy deployment
