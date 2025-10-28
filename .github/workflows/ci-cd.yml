@@ -11,7 +11,8 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-2
+  AWS_REGION: us-east-2           
+  ECR_REGION: us-east-1           
   IMAGE_TAG: master-${{ github.sha }}
 
 jobs:
@@ -49,12 +50,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials for ECR
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ env.ECR_REGION }}    # ✅ us-east-1 para ECR
       
       - name: Login to ECR Public
         uses: aws-actions/amazon-ecr-login@v2
@@ -96,33 +97,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials for deployment
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}    # ✅ us-east-2 para S3/CodeDeploy
       
       - name: Create deployment package
         run: |
           echo "Creating deployment package..."
           
-          # Crear directorio temporal
           mkdir -p deployment-package
           
-          # Copiar archivos necesarios
           cp -r scripts deployment-package/
           cp appspec.yml deployment-package/
           cp docker-compose.prod.yml deployment-package/
           
-          # Crear archivo con variables de imagen
           cat > deployment-package/.env.images << EOF
           IMAGE_TAG=${{ env.IMAGE_TAG }}
           API_IMAGE=${{ secrets.ECR_API_REPOSITORY }}:${{ env.IMAGE_TAG }}
           MQTT_IMAGE=${{ secrets.ECR_MQTT_REPOSITORY }}:${{ env.IMAGE_TAG }}
           EOF
           
-          # Crear zip
           cd deployment-package
           zip -r ../deployment-${{ github.sha }}.zip .
           cd ..
@@ -162,17 +159,24 @@ jobs:
           
           aws deploy wait deployment-successful \
             --deployment-id ${{ steps.deploy.outputs.deployment_id }} \
-            --region ${{ env.AWS_REGION }}
+            --region ${{ env.AWS_REGION }} \
+            || true
           
-          echo "✅ Deployment completed successfully"
+          echo "Deployment process finished"
       
       - name: Get deployment status
         if: always()
         run: |
-          aws deploy get-deployment \
+          status=$(aws deploy get-deployment \
             --deployment-id ${{ steps.deploy.outputs.deployment_id }} \
             --region ${{ env.AWS_REGION }} \
             --query 'deploymentInfo.status' \
-            --output text
+            --output text)
           
+          echo "Deployment status: $status"
           echo "Check details at: https://console.aws.amazon.com/codesuite/codedeploy/deployments/${{ steps.deploy.outputs.deployment_id }}?region=${{ env.AWS_REGION }}"
+          
+          if [ "$status" != "Succeeded" ]; then
+            echo "⚠️ Deployment did not succeed"
+            exit 1
+          fi
