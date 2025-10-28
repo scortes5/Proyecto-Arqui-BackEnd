@@ -11,7 +11,11 @@ if [ -f docker-compose.prod.yml ]; then
   docker-compose -f docker-compose.prod.yml rm -f api mqtt || true
 fi
 
-# Limpiar contenedores detenidos
-docker container prune -f || true
+docker-compose -f /home/ubuntu/app/docker-compose.prod.yml down --remove-orphans || true
+docker container prune -f
+docker image prune -af
+docker network prune -f
+
+rm -rf ./*
 
 echo "=== Application Stopped ==="
