@@ -131,11 +131,7 @@ jobs:
       - name: Upload to S3
         run: |
           echo "Uploading to S3..."
-          
-          aws s3 cp deployment-${{ github.sha }}.zip \
-            s3://${{ secrets.S3_DEPLOYMENT_BUCKET }}/grupo-XX-backend/deployment-${{ github.sha }}.zip \
-            --region ${{ env.AWS_REGION }}
-          
+          aws s3 cp deployment-${{ github.sha }}.zip s3://${{ secrets.S3_DEPLOYMENT_BUCKET }}/grupo-04-backend/deployment-${{ github.sha }}.zip --region ${{ env.AWS_REGION }}
           echo "✅ Package uploaded to S3"
       
       - name: Create CodeDeploy deployment
@@ -147,7 +143,7 @@ jobs:
           deployment_output=$(aws deploy create-deployment \
             --application-name ${{ secrets.CODEDEPLOY_APPLICATION_NAME }} \
             --deployment-group-name ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }} \
-            --s3-location bucket=${{ secrets.S3_DEPLOYMENT_BUCKET }},key=grupo-XX-backend/deployment-${{ github.sha }}.zip,bundleType=zip \
+            --s3-location bucket=${{ secrets.S3_DEPLOYMENT_BUCKET }},key=grupo-04-backend/deployment-${{ github.sha }}.zip,bundleType=zip \
             --description "Deployment of commit ${{ github.sha }}" \
             --region ${{ env.AWS_REGION }} 2>&1)
           
