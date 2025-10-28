@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-2
+  AWS_REGION: us-east-1
   IMAGE_TAG: master-${{ github.sha }}
 
 jobs:
