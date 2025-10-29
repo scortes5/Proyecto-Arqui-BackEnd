@@ -114,7 +114,7 @@ jobs:
           cp appspec.yml deployment-package/
           cp docker-compose.prod.yml deployment-package/
           
-          cat > deployment-package/.env.images << EOF
+          cat > deployment-package/.env << EOF
           IMAGE_TAG=${{ env.IMAGE_TAG }}
           API_IMAGE=${{ secrets.ECR_API_REPOSITORY }}:${{ env.IMAGE_TAG }}
           MQTT_IMAGE=${{ secrets.ECR_MQTT_REPOSITORY }}:${{ env.IMAGE_TAG }}
