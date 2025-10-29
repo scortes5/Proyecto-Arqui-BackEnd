@@ -26,7 +26,6 @@ async function handlePropertyValidation(message) {
     }
 
     console.log(`Validación recibida: ${validation.request_id} - Status: ${validation.status}`);
-    console.log(`  Reason: ${validation.reason || 'N/A'}`);
 
     await fibonacciRetry(async () => {
       const response = await fetch(`${process.env.API_URL}/appointments/validate`, {

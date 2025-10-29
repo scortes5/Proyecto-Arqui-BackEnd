@@ -4,7 +4,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.addColumn("Appointments", "deposit_token", {
       type: Sequelize.STRING,
-      allowNull: true,
+      allowNull: false,
     });
   },
 

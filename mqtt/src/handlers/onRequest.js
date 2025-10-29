@@ -2,20 +2,25 @@
 const { fibonacciRetry } = require('../utils/retry');
 
 async function handlePropertyRequest(message) {
+  const raw = message.toString();
+  const request = JSON.parse(raw);
   try {
-    const raw = message.toString();
-    const request = JSON.parse(raw);
     
     // Validar esquema
     if (!request.request_id || !request.group_id || !request.url) {
-      console.error('❌ Solicitud inválida, faltan campos requeridos:', request);
+      console.error('(onRequest) ❌ Solicitud inválida, faltan campos requeridos:', request);
       return;
     }
 
-    console.log(`Solicitud de compra detectada: ${request.request_id} (Grupo: ${request.group_id})`);
-    console.log(`   URL: ${request.url}`);
+    if (!request.deposit_token) {
+      // console.error('(onRequest) 🔑 Solicitud sin token');
+      return;
+    }
+
+
+    console.log(`(onRequest) Solicitud de compra detectada: ${request.request_id} (Grupo: ${request.group_id})`);
     // Log the entire request object
-    console.log('📦 Request completa:', JSON.stringify(request, null, 2));
+    // console.log('📦 Request completa:', JSON.stringify(request, null, 2));
     
     if (request.details) {
       console.log(`   Detalles: ${JSON.stringify(request.details)}`);
@@ -35,12 +40,13 @@ async function handlePropertyRequest(message) {
       }
 
       const result = await response.json();
-      console.log(`✅ Solicitud registrada: ${request.request_id}`);
+      console.log(`(onRequest) ✅ Solicitud registrada: ${request.request_id}`);
       return result;
     });
 
   } catch (err) {
-    console.error('❌ Error al procesar solicitud:', err.message);
+    console.error('(onRequest) ❌ Error al procesar solicitud:', err.message, err.status);
+    console.log('\t(onRequest)  Request completa:', JSON.stringify(request, null, 2));
   }
 }
 

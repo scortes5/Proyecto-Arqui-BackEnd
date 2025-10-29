@@ -10,9 +10,6 @@ async function handlePropertyInfo(message) {
       return;
     }
 
-    console.log(`Nueva propiedad recibida: ${property.name} - $${property.price} ${property.currency}`);
-
-
     await fibonacciRetry(async () => {
       const response = await fetch(`${process.env.API_URL}/properties`, {
         method: 'POST',
@@ -29,7 +26,7 @@ async function handlePropertyInfo(message) {
       }
 
       const result = await response.json();
-      console.log(`✅ Propiedad guardada: ${result.name} (ID: ${result.id})`);
+      console.log(`🏠 Propiedad guardada: ${result.name} (ID: ${result.id})`);
       return result;
     });
 

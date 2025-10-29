@@ -8,7 +8,13 @@ module.exports = {
     "password": process.env.DB_PASSWORD,
     "database": `${process.env.DB_NAME}`,
     "host": process.env.DB_HOST,
-    "dialect": "postgres"
+    "dialect": "postgres",
+    "pool": {
+      "max": 20,
+      "min": 0,
+      "acquire": 60000,
+      "idle": 10000
+    }
   },
   "test": {
     "username": process.env.DB_USERNAME,
@@ -16,6 +22,12 @@ module.exports = {
     "database": `${process.env.DB_NAME}_test`,
     "host": process.env.DB_HOST,
     "dialect": "postgres",
+    "pool": {
+      "max": 20,
+      "min": 0,
+      "acquire": 60000,
+      "idle": 10000
+    }
   },
   "production": {
     "username": process.env.DB_USERNAME,
@@ -23,6 +35,12 @@ module.exports = {
     "database": `${process.env.DB_NAME}_production`,
     "host": process.env.DB_HOST,
     "dialect": "postgres",
+    "pool": {
+      "max": 20,
+      "min": 0,
+      "acquire": 60000,
+      "idle": 10000
+    }
   }
 }
 
