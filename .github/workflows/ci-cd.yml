@@ -168,36 +168,25 @@ jobs:
         run: |
           echo "Creating CodeDeploy deployment..."
           
-          # Extraer solo el nombre del bucket
-          BUCKET_NAME=$(echo "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | cut -d'/' -f1)
-          S3_KEY="grupo-04-backend/deployment-${{ github.sha }}.zip"
-          
-          echo "Application: ${{ secrets.CODEDEPLOY_APPLICATION_NAME }}"
-          echo "Deployment Group: ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }}"
-          echo "S3 Location: s3://${BUCKET_NAME}/${S3_KEY}"
-          
-          # Crear deployment y capturar todo el output
           deployment_output=$(aws deploy create-deployment \
-            --application-name ${{ secrets.CODEDEPLOY_APPLICATION_NAME }} \
-            --deployment-group-name ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }} \
-            --s3-location bucket=${BUCKET_NAME},key=${S3_KEY},bundleType=zip \
+            --application-name "${{ secrets.CODEDEPLOY_APPLICATION_NAME }}" \
+            --deployment-group-name "${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }}" \
+            --s3-location "bucket=deploy-bucket-arquisis,key=grupo-04-backend/deployment-${{ github.sha }}.zip,bundleType=zip" \
             --description "Deployment of commit ${{ github.sha }}" \
-            --region ${{ env.AWS_REGION }} 2>&1)
+            --region "${{ env.AWS_REGION }}" 2>&1)
           
           echo "AWS Response: $deployment_output"
           
-          # Extraer el deployment ID del output JSON
+          # Extraer deployment ID
           deployment_id=$(echo "$deployment_output" | grep -o '"deploymentId": "[^"]*"' | cut -d'"' -f4)
           
           if [ -z "$deployment_id" ]; then
             echo "❌ Failed to extract deployment ID"
-            echo "Full output: $deployment_output"
             exit 1
           fi
           
           echo "deployment_id=$deployment_id" >> $GITHUB_OUTPUT
           echo "✅ Deployment created: $deployment_id"
-          echo "🔗 Console: https://console.aws.amazon.com/codesuite/codedeploy/deployments/$deployment_id?region=${{ env.AWS_REGION }}"
       
       - name: Wait for deployment
         run: |
