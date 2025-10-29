@@ -8,7 +8,7 @@ async function fibonacciRetry(fn, maxRetries = 5) {
       if (attempt === maxRetries - 1) throw error;
       
       const delay = fib1 * 1000;
-      console.log(`Reintentando en ${fib1}s... (intento ${attempt + 1}/${maxRetries})`);
+      // console.log(`Reintentando en ${fib1}s... (intento ${attempt + 1}/${maxRetries})`);
       
       await new Promise(resolve => setTimeout(resolve, delay));
       [fib1, fib2] = [fib2, fib1 + fib2];

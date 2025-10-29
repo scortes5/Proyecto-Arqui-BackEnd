@@ -1,8 +1,31 @@
 const { fibonacciRetry } = require('../utils/retry');
 
-
-
 let mqttClient = null;
+
+// ====================================================
+// 🧩 UTILIDADES BÁSICAS DEL CLIENTE MQTT
+// ====================================================
+
+function setMqttClient(client) {
+  mqttClient = client;
+  console.log('Cliente MQTT configurado en el publisher');
+}
+
+function isClientReady() {
+  return mqttClient !== null && mqttClient.connected;
+}
+
+function getClientStatus() {
+  return {
+    initialized: mqttClient !== null,
+    connected: mqttClient ? mqttClient.connected : false,
+    reconnecting: mqttClient ? mqttClient.reconnecting : false
+  };
+}
+
+// ====================================================
+// 📦 MANEJO DE SOLICITUDES PENDIENTES (status === 'PENDING')
+// ====================================================
 
 async function getPendingAppointments() {
   console.log(process.env.API_URL);
@@ -13,8 +36,6 @@ async function getPendingAppointments() {
   }
 
   const appointments = await response.json();
-  
-  // Filtrar solo las que están pendientes
   return appointments.filter(a => a.status === 'PENDING');
 }
 
@@ -32,6 +53,7 @@ async function publishPendingAppointments() {
       try {
         await publishPurchaseRequest({
           request_id: request.request_id,
+          deposit_token: request.deposit_token,
           group_id: request.group_id,
           url: request.property_url,
           timestamp: request.created_at,
@@ -47,91 +69,151 @@ async function publishPendingAppointments() {
   }
 }
 
+// ====================================================
+// 🛒 PUBLICACIÓN DE SOLICITUDES DE COMPRA (canal: properties/requests)
+// ====================================================
 
-/**
- * Establece el cliente MQTT que se usará para publicar
- * @param {Object} client - Cliente MQTT conectado
- */
-function setMqttClient(client) {
-  mqttClient = client;
-  console.log('Cliente MQTT configurado en el publisher');
-}
-
-/**
- * Publica una solicitud de compra en el broker MQTT con retry fibonacci
- * @param {Object} requestData - Datos de la solicitud
- * @param {string} requestData.request_id - UUID de la solicitud
- * @param {string} requestData.group_id - ID del grupo
- * @param {string} requestData.url - URL de la propiedad
- * @param {number} requestData.origin - Origen (0 por defecto)
- * @param {string} requestData.operation - Operación (BUY por defecto)
- * @param {string} requestData.timestamp - Timestamp ISO 8601
- * @returns {Promise<void>}
- */
 async function publishPurchaseRequest(requestData) {
-  // Validar que el cliente esté conectado
-  if (!mqttClient) {
-    throw new Error('Cliente MQTT no inicializado');
-  }
+  if (!isClientReady()) throw new Error('Cliente MQTT no inicializado');
 
-  // Validar campos requeridos
-  const requiredFields = ['request_id', 'group_id', 'url', 'timestamp'];
+  const requiredFields = ['request_id', 'deposit_token', 'group_id', 'url', 'timestamp'];
   const missingFields = requiredFields.filter(field => !requestData[field]);
-  
-  if (missingFields.length > 0) {
-    throw new Error(`Faltan campos requeridos: ${missingFields.join(', ')}`);
-  }
+  if (missingFields.length > 0)
+    throw new Error(`Faltan campos de REQUEST: ${missingFields.join(', ')}`);
 
-  // Aplicar retry fibonacci a la publicación
   return await fibonacciRetry(async () => {
     return new Promise((resolve, reject) => {
-      // Verificar que siga conectado en cada intento
-      if (!mqttClient.connected) {
-        throw new Error('Cliente MQTT no conectado');
-      }
+      if (!mqttClient.connected) return reject(new Error('Cliente MQTT no conectado'));
 
       const message = JSON.stringify(requestData);
       const channel = 'properties/requests';
 
-      console.log(`Publicando solicitud: ${requestData.request_id}`);
-
+      console.log(`(REQUEST) Publicando: ${requestData.request_id}`);
       mqttClient.publish(channel, message, { qos: 1 }, (err) => {
         if (err) {
-          console.error('Error publicando solicitud:', err.message);
+          console.error('(REQUEST) Error:', err.message);
           reject(err);
         } else {
-          console.log(`Solicitud publicada exitosamente: ${requestData.request_id}`);
+          console.log(`(REQUEST) Publicado: ${requestData.request_id}`);
           resolve();
         }
       });
     });
-  }, 5); // 5 reintentos con secuencia fibonacci: 1s, 1s, 2s, 3s, 5s
+  }, 5);
 }
 
-/**
- * Verifica si el cliente MQTT está disponible y conectado
- * @returns {boolean}
- */
-function isClientReady() {
-  return mqttClient !== null && mqttClient.connected;
+// ====================================================
+// ✅ MANEJO DE VALIDACIONES (status === 'ACCEPTED' o 'REJECTED')
+// ====================================================
+
+async function getConfirmedAppointments() {
+  const response = await fetch(`${process.env.API_URL}/appointments/all`);
+  if (!response.ok)
+    throw new Error(`Error consultando appointments: ${response.status}`);
+
+  const appointments = await response.json();
+
+  return appointments.filter(a =>
+    (a.status === 'ACCEPTED' || a.status === 'REJECTED') &&
+    a.validation_published === false
+  );
 }
 
-/**
- * Obtiene el estado del cliente MQTT
- * @returns {Object}
- */
-function getClientStatus() {
-  return {
-    initialized: mqttClient !== null,
-    connected: mqttClient ? mqttClient.connected : false,
-    reconnecting: mqttClient ? mqttClient.reconnecting : false
-  };
+async function markValidationAsPublishedInDB(appointmentId) {
+  const url = `${process.env.API_URL}/appointments/${appointmentId}`;
+  
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ validation_published: true })
+  });
+
+  if (!response.ok)
+    throw new Error(`API falló al marcar ${appointmentId} como publicado (${response.status})`);
+  
+  console.log(`(DB) Cita ${appointmentId} marcada como publicada.`);
+  return await response.json();
 }
 
-module.exports = { 
+async function publishPurchaseValidation(validationData) {
+  if (!isClientReady()) throw new Error('Cliente MQTT no inicializado');
+
+  const requiredFields = ['request_id', 'status', 'timestamp'];
+  const missingFields = requiredFields.filter(field => !validationData[field]);
+  if (missingFields.length > 0)
+    throw new Error(`Faltan campos de VALIDACIÓN: ${missingFields.join(', ')}`);
+
+  return await fibonacciRetry(async () => {
+    return new Promise((resolve, reject) => {
+      if (!mqttClient.connected) return reject(new Error('Cliente MQTT no conectado'));
+
+      const message = JSON.stringify(validationData);
+      const channel = 'properties/validation';
+
+      console.log(`(VALIDATION) Publicando: ${validationData.request_id} - ${validationData.status}`);
+      mqttClient.publish(channel, message, { qos: 1 }, (err) => {
+        if (err) {
+          console.error('(VALIDATION) Error:', err.message);
+          reject(err);
+        } else {
+          console.log(`(VALIDATION) Publicado: ${validationData.request_id}`);
+          resolve();
+        }
+      });
+    });
+  }, 5);
+}
+
+async function publishConfirmedAppointments() {
+  if (!isClientReady()) {
+    console.warn('MQTT client no listo. No se pueden publicar validaciones.');
+    return;
+  }
+
+  try {
+    const pendingValidations = await getConfirmedAppointments();
+
+    if (pendingValidations.length > 0)
+      console.log(`Se encontraron ${pendingValidations.length} validaciones pendientes por publicar.`);
+
+    for (const validation of pendingValidations) {
+      try {
+        if (!validation.id) {
+          console.error('Error: Objeto de cita sin "id". No se puede actualizar DB.', validation);
+          continue;
+        }
+
+        await publishPurchaseValidation({
+          request_id: validation.request_id,
+          status: validation.status,
+          timestamp: validation.updated_at || new Date().toISOString(),
+          reason: validation.reason || (validation.status === 'ACCEPTED' ? 'Pago exitoso' : 'Pago rechazado')
+        });
+
+        await markValidationAsPublishedInDB(validation.id);
+      } catch (err) {
+        console.error(`Error procesando validación ${validation.request_id}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('Error en el ciclo de publicación de pendientes:', err.message);
+  }
+}
+
+// ====================================================
+// 🧾 EXPORTS
+// ====================================================
+
+module.exports = {
+  // Publicaciones
   publishPurchaseRequest,
+  publishPurchaseValidation,
+  // Pendientes
+  publishPendingAppointments,
+  // Confirmadas / rechazadas
+  publishConfirmedAppointments,
+  // Utilidades
   setMqttClient,
   isClientReady,
-  getClientStatus,
-  publishPendingAppointments
+  getClientStatus
 };

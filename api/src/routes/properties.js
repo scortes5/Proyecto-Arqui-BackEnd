@@ -52,7 +52,6 @@ router.get('/', async (ctx) => {
   }
 });
 
-
 // Obtener una propiedad por su id
 router.get('/:id', async (ctx) => {
   try {

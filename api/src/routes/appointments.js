@@ -8,91 +8,92 @@ const { v4: uuidv4 } = require("uuid");
 const { tx } = require("../utils/trx");
 
 // POST /appointments/buy
-router.post("/buy", async (ctx) => {
-  const { userId } = ctx.state.user;
-  const { property_id } = ctx.request.body;
+// router.post("/buy", async (ctx) => {
+//   const { userId } = ctx.state.user;
+//   const { property_id } = ctx.request.body;
 
-  if (!property_id) {
-    ctx.throw(400, "Id Propiedad faltante");
-  }
+//   if (!property_id) {
+//     ctx.throw(400, "Id Propiedad faltante");
+//   }
 
-  if (!userId) {
-    ctx.throw(400, "Id Usuario faltante");
-  }
+//   if (!userId) {
+//     ctx.throw(400, "Id Usuario faltante");
+//   }
 
-  const property = await Property.findByPk(property_id);
-  if (!property) {
-    ctx.throw(404, "Propiedad no Encontrada");
-  }
+//   const property = await Property.findByPk(property_id);
+//   if (!property) {
+//     ctx.throw(404, "Propiedad no Encontrada");
+//   }
 
-  if (property.reservations < 1) {
-    ctx.throw(409, "No existen Reservas disponibles para la propiedad");
-  }
+//   if (property.reservations < 1) {
+//     ctx.throw(409, "No existen Reservas disponibles para la propiedad");
+//   }
 
-  const { price, currency, url: url } = property;
-  const property_url = url.split("#")[0];
+//   const { price, currency, url: url } = property;
+//   const property_url = url.split("#")[0];
 
-  // UF a CLP
-  let finalPrice = price;
-  if (currency === "UF") {
-    const ufResponse = await fetch("https://mindicador.cl/api/uf");
-    const ufData = await ufResponse.json();
+//   // UF a CLP
+//   let finalPrice = price;
+//   if (currency === "UF") {
+//     const ufResponse = await fetch("https://mindicador.cl/api/uf");
+//     const ufData = await ufResponse.json();
 
-    if (!ufData.serie?.length) {
-      ctx.throw(
-        500,
-        "Fallo conversión UF: sin datos válidos desde mindicador.cl"
-      );
-    }
+//     if (!ufData.serie?.length) {
+//       ctx.throw(
+//         500,
+//         "Fallo conversión UF: sin datos válidos desde mindicador.cl"
+//       );
+//     }
 
-    const ufValue = parseFloat(ufData.serie[0].valor);
-    if (isNaN(ufValue)) ctx.throw(500, "Fallo conversión UF a CLP");
+//     const ufValue = parseFloat(ufData.serie[0].valor);
+//     if (isNaN(ufValue)) ctx.throw(500, "Fallo conversión UF a CLP");
 
-    finalPrice = price * ufValue;
-  }
+//     finalPrice = price * ufValue;
+//   }
 
-  const cost = Math.floor(finalPrice * 0.1);
+//   const cost = Math.floor(finalPrice * 0.1);
 
-  const wallet = await Wallet.findOne({ where: { user_id: userId } });
-  if (!wallet || wallet.balance < cost) {
-    ctx.throw(402, "Dinero Insuficiente");
-  }
+//   const wallet = await Wallet.findOne({ where: { user_id: userId } });
+//   if (!wallet || wallet.balance < cost) {
+//     ctx.throw(402, "Dinero Insuficiente");
+//   }
 
-  const existing = await Appointment.findOne({
-    where: {
-      user_id: userId,
-      property_url,
-      status: { [Op.in]: ["PENDING", "ACCEPTED"] },
-    },
-  });
-  if (existing)
-    ctx.throw(409, "Ya tienes una invitacion pendiente para esta propiedad");
+//   const existing = await Appointment.findOne({
+//     where: {
+//       user_id: userId,
+//       property_url,
+//       status: { [Op.in]: ["PENDING", "ACCEPTED"] },
+//     },
+//   });
+//   if (existing)
+//     ctx.throw(409, "Ya tienes una invitacion pendiente para esta propiedad");
 
-  const request_id = uuidv4();
+//   const request_id = uuidv4();
 
-  await Appointment.create({
-    request_id,
-    user_id: userId,
-    group_id: "04",
-    property_url,
-    status: "PENDING",
-    reason: "APPOINTMENT",
-  });
+//   await Appointment.create({
+//     request_id,
+//     user_id: userId,
+//     group_id: "04",
+//     property_url,
+//     status: "PENDING",
+//     reason: "APPOINTMENT",
+//   });
 
-  wallet.balance -= cost;
-  property.reservations -= 1;
-  await property.save();
-  await wallet.save();
+//   wallet.balance -= cost;
+//   property.reservations -= 1;
+//   await property.save();
+//   await wallet.save();
 
-  ctx.body = { request_id, status: "PENDING" };
-  ctx.status = 201;
-});
+//   ctx.body = { request_id, status: "PENDING" };
+//   ctx.status = 201;
+// });
 
 // POST /appointments/validate
 router.post("/validate", async (ctx) => {
-  const { request_id, status, reason, timestamp } = ctx.request.body;
+  const { request_id, deposit_token, status, reason, timestamp } =
+    ctx.request.body;
 
-  if (!request_id || !status || !timestamp) {
+  if (!request_id || !deposit_token || !status || !timestamp) {
     ctx.throw(400, "Request Body Incompleto");
   }
 
@@ -123,7 +124,8 @@ router.post("/validate", async (ctx) => {
 
 // POST /appointments/requests
 router.post("/requests", async (ctx) => {
-  const { request_id, group_id, url, timestamp } = ctx.request.body;
+  const { request_id, deposit_token, group_id, url, timestamp } =
+    ctx.request.body;
 
   if (!request_id || !group_id || !timestamp || !url) {
     ctx.throw(400, "Request Body Incompleto");
@@ -134,6 +136,7 @@ router.post("/requests", async (ctx) => {
   if (!appointment) {
     await Appointment.create({
       request_id,
+      deposit_token,
       group_id,
       property_url: url,
       status: "PENDING",
@@ -176,6 +179,7 @@ router.get("/all", async (ctx) => {
 
   ctx.body = appointments.map((a) => ({
     request_id: a.request_id,
+    deposit_token: a.deposit_token,
     user_id: a.user_id,
     group_id: a.group_id,
     property_url: a.property_url,
@@ -206,6 +210,52 @@ router.get("/status/:request_id", async (ctx) => {
     reason: appointment.reason,
   };
   ctx.status = 200;
+});
+
+// PATCH /appointments/:request_id
+router.patch("/appointments/:request_id", async (ctx) => {
+  const { request_id } = ctx.params;
+
+  if (!request_id) {
+    ctx.throw(400, "Falta request_id");
+  }
+
+  const appointment = await Appointment.findOne({ where: { request_id } });
+
+  if (!appointment) {
+    ctx.throw(404, "Appointment not Found");
+  }
+
+  appointment.validation_published = true;
+  await appointment.save();
+
+  ctx.status = 200;
+  ctx.body = {
+    message: "Cita marcada como publicada",
+    request_id: appointment.request_id,
+  };
+});
+
+// DELETE /appointments/:request_id
+router.delete("/appointments/:request_id", async (ctx) => {
+  const { request_id } = ctx.params;
+
+  if (!request_id) {
+    ctx.throw(400, "Falta request_id");
+  }
+
+  const appointment = await Appointment.findOne({ where: { request_id } });
+
+  if (!appointment) {
+    ctx.throw(404, "Appointment not Found");
+  }
+
+  await appointment.destroy();
+
+  ctx.status = 200;
+  ctx.body = {
+    message: "Appointment Deleted",
+  };
 });
 
 ///////////////Rutas webpay//////////////////////
@@ -241,8 +291,11 @@ router.post("/buywebpay", async (ctx) => {
     });
 
     if (existing) {
-      console.log("Conflict detected: existing appointment");
-      ctx.throw(409, "Ya tienes una invitación pendiente para esta propiedad");
+      existing.destroy();
+      console.log(
+        "Existing appointment found and deleted:",
+        existing.request_id
+      );
     }
 
     // Compute price safely
