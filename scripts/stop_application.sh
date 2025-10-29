@@ -5,17 +5,26 @@ echo "=== Stopping Application ==="
 
 cd /home/ubuntu/app
 
-# Detener solo api y mqtt, mantener db corriendo
-if [ -f docker-compose.prod.yml ]; then
-  docker-compose -f docker-compose.prod.yml stop api mqtt || true
-  docker-compose -f docker-compose.prod.yml rm -f api mqtt || true
+# Detectar si necesita sudo
+if docker ps > /dev/null 2>&1; then
+    DOCKER_CMD=""
+    COMPOSE_CMD="docker-compose"
+else
+    DOCKER_CMD="sudo"
+    COMPOSE_CMD="sudo docker-compose"
 fi
 
-docker-compose -f /home/ubuntu/app/docker-compose.prod.yml down --remove-orphans || true
-docker container prune -f
-docker image prune -af
-docker network prune -f
+# 1. Detener y eliminar TODOS los contenedores
+if [ -f docker-compose.prod.yml ]; then
+    $COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans || true
+fi
 
-rm -rf ./*
+# 2. Eliminar contenedores específicos por nombre (por si acaso)
+$DOCKER_CMD docker rm -f postgres-db api mqtt 2>/dev/null || true
+
+# 3. Limpiar recursos Docker
+$DOCKER_CMD docker container prune -f || true
+$DOCKER_CMD docker image prune -af || true
+$DOCKER_CMD docker network prune -f || true
 
 echo "=== Application Stopped ==="
