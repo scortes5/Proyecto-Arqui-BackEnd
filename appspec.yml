@@ -4,7 +4,7 @@ os: linux
 files:
   - source: docker-compose.prod.yml
     destination: /home/ubuntu/app
-  - source: .env
+  - source: .env.images
     destination: /home/ubuntu/app
   - source: scripts/
     destination: /home/ubuntu/app/scripts

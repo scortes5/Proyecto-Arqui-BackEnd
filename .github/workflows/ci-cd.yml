@@ -114,7 +114,7 @@ jobs:
           cp appspec.yml deployment-package/
           cp docker-compose.prod.yml deployment-package/
           
-          cat > deployment-package/.env << EOF
+          cat > deployment-package/.env.images << EOF
           IMAGE_TAG=${{ env.IMAGE_TAG }}
           API_IMAGE=${{ secrets.ECR_API_REPOSITORY }}:${{ env.IMAGE_TAG }}
           MQTT_IMAGE=${{ secrets.ECR_MQTT_REPOSITORY }}:${{ env.IMAGE_TAG }}
@@ -128,57 +128,94 @@ jobs:
           
           echo "✅ Deployment package created"
       
+      - name: Debug - Verify files and secrets
+        run: |
+          echo "=== Checking deployment file ==="
+          ls -lh deployment-${{ github.sha }}.zip
+          file deployment-${{ github.sha }}.zip
+          
+          echo ""
+          echo "=== Secrets validation ==="
+          echo "S3_DEPLOYMENT_BUCKET length: ${#S3_BUCKET}"
+          echo "S3_DEPLOYMENT_BUCKET value (masked): ${S3_BUCKET:0:10}..."
+          echo "Contains spaces: $(echo '$S3_BUCKET' | grep -q ' ' && echo 'YES' || echo 'NO')"
+          echo "Contains slashes: $(echo '$S3_BUCKET' | grep -q '/' && echo 'YES' || echo 'NO')"
+          
+          echo ""
+          echo "=== AWS CLI version ==="
+          aws --version
+          
+          echo ""
+          echo "=== Test S3 access ==="
+          aws s3 ls "s3://${S3_BUCKET}/" --region ${{ env.AWS_REGION }} || echo "Cannot list bucket"
+        env:
+          S3_BUCKET: ${{ secrets.S3_DEPLOYMENT_BUCKET }}
+      
       - name: Upload to S3
         run: |
-          echo "=== Debug Info ==="
-          # Verificar el archivo existe
-          ls -la deployment-${{ github.sha }}.zip
+          echo "Uploading to S3..."
           
-          # Probar con el nombre directo del bucket (sin secret)
-          aws s3 cp deployment-${{ github.sha }}.zip \
-            s3://deploy-bucket-arquisis/grupo-04-backend/deployment-${{ github.sha }}.zip \
-            --region us-east-2
+          # Limpiar el bucket name de posibles espacios o caracteres raros
+          BUCKET_NAME=$(echo "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | tr -d '[:space:]' | sed 's/^s3:\/\///')
+          S3_KEY="grupo-XX-backend/deployment-${{ github.sha }}.zip"
+          LOCAL_FILE="deployment-${{ github.sha }}.zip"
+          
+          echo "Bucket: '${BUCKET_NAME}'"
+          echo "Key: '${S3_KEY}'"
+          echo "Local file: '${LOCAL_FILE}'"
+          
+          # Verificar que el archivo existe
+          if [ ! -f "${LOCAL_FILE}" ]; then
+            echo "❌ Local file not found!"
+            exit 1
+          fi
+          
+          # Subir con sintaxis explícita
+          aws s3api put-object \
+            --bucket "${BUCKET_NAME}" \
+            --key "${S3_KEY}" \
+            --body "${LOCAL_FILE}" \
+            --region "${{ env.AWS_REGION }}"
           
           echo "✅ Package uploaded to S3"
+          echo "S3 URI: s3://${BUCKET_NAME}/${S3_KEY}"
       
       - name: Create CodeDeploy deployment
         id: deploy
         run: |
           echo "Creating CodeDeploy deployment..."
-          set -x  # Modo debug
           
-          # Definir TODAS las variables para evitar enmascaramiento
-          APP_NAME="${{ secrets.CODEDEPLOY_APPLICATION_NAME }}"
-          GROUP_NAME="${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }}"
-          BUCKET_NAME="deploy-bucket-arquisis"  # ← Nombre directo, no secret
-          S3_KEY="grupo-04-backend/deployment-${{ github.sha }}.zip"
+          # Extraer solo el nombre del bucket
+          BUCKET_NAME=$(echo "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | cut -d'/' -f1)
+          S3_KEY="grupo-XX-backend/deployment-${{ github.sha }}.zip"
           
-          echo "Using: App=$APP_NAME, Group=$GROUP_NAME, Bucket=$BUCKET_NAME"
+          echo "Application: ${{ secrets.CODEDEPLOY_APPLICATION_NAME }}"
+          echo "Deployment Group: ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }}"
+          echo "S3 Location: s3://${BUCKET_NAME}/${S3_KEY}"
           
-          # Construir el S3 location SIN variables enmascaradas
-          S3_LOCATION="bucket=$BUCKET_NAME,key=$S3_KEY,bundleType=zip"
-          
+          # Crear deployment y capturar todo el output
           deployment_output=$(aws deploy create-deployment \
-            --application-name "$APP_NAME" \
-            --deployment-group-name "$GROUP_NAME" \
-            --s3-location "$S3_LOCATION" \
+            --application-name ${{ secrets.CODEDEPLOY_APPLICATION_NAME }} \
+            --deployment-group-name ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }} \
+            --s3-location bucket=${BUCKET_NAME},key=${S3_KEY},bundleType=zip \
             --description "Deployment of commit ${{ github.sha }}" \
-            --region us-east-2 2>&1)
+            --region ${{ env.AWS_REGION }} 2>&1)
           
-          set +x
-          echo "AWS Response:"
-          echo "$deployment_output"
+          echo "AWS Response: $deployment_output"
           
+          # Extraer el deployment ID del output JSON
           deployment_id=$(echo "$deployment_output" | grep -o '"deploymentId": "[^"]*"' | cut -d'"' -f4)
           
           if [ -z "$deployment_id" ]; then
             echo "❌ Failed to extract deployment ID"
+            echo "Full output: $deployment_output"
             exit 1
           fi
           
           echo "deployment_id=$deployment_id" >> $GITHUB_OUTPUT
           echo "✅ Deployment created: $deployment_id"
-
+          echo "🔗 Console: https://console.aws.amazon.com/codesuite/codedeploy/deployments/$deployment_id?region=${{ env.AWS_REGION }}"
+      
       - name: Wait for deployment
         run: |
           DEPLOYMENT_ID="${{ steps.deploy.outputs.deployment_id }}"
