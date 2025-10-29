@@ -142,30 +142,41 @@ jobs:
           echo "✅ Package uploaded to S3"
       
       - name: Create CodeDeploy deployment
+        id: deploy
         run: |
           echo "Creating CodeDeploy deployment..."
           set -x  # Modo debug
-
+          
+          # Definir TODAS las variables para evitar enmascaramiento
+          APP_NAME="${{ secrets.CODEDEPLOY_APPLICATION_NAME }}"
+          GROUP_NAME="${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }}"
+          BUCKET_NAME="deploy-bucket-arquisis"  # ← Nombre directo, no secret
+          S3_KEY="grupo-04-backend/deployment-${{ github.sha }}.zip"
+          
+          echo "Using: App=$APP_NAME, Group=$GROUP_NAME, Bucket=$BUCKET_NAME"
+          
+          # Construir el S3 location SIN variables enmascaradas
+          S3_LOCATION="bucket=$BUCKET_NAME,key=$S3_KEY,bundleType=zip"
+          
           deployment_output=$(aws deploy create-deployment \
-            --application-name "${{ secrets.CODEDEPLOY_APPLICATION_NAME }}" \
-            --deployment-group-name "${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }}" \
-            --s3-location bucket=${{ secrets.S3_BUCKET }},key=grupo-XX-backend/deployment-${{ github.sha }}.zip,bundleType=zip \
+            --application-name "$APP_NAME" \
+            --deployment-group-name "$GROUP_NAME" \
+            --s3-location "$S3_LOCATION" \
             --description "Deployment of commit ${{ github.sha }}" \
             --region us-east-2 2>&1)
           
           set +x
           echo "AWS Response:"
           echo "$deployment_output"
-
+          
           deployment_id=$(echo "$deployment_output" | grep -o '"deploymentId": "[^"]*"' | cut -d'"' -f4)
-
+          
           if [ -z "$deployment_id" ]; then
             echo "❌ Failed to extract deployment ID"
-            echo "Full output:"
-            echo "$deployment_output"
             exit 1
           fi
-
+          
+          echo "deployment_id=$deployment_id" >> $GITHUB_OUTPUT
           echo "✅ Deployment created: $deployment_id"
 
       - name: Wait for deployment
