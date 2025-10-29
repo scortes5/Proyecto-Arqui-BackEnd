@@ -1,13 +1,13 @@
 const Router = require("@koa/router");
 const router = new Router();
-const { Op } = require('sequelize');
-const { Property } = require('../models')
+const { Op } = require("sequelize");
+const { Property } = require("../models");
 
 // -------------------------------------- METODO GET ---------------------------------------------
 // obtener todas las propiedades
-router.get('/', async (ctx) => {
+router.get("/", async (ctx) => {
   try {
-    const { page = 1, limit = 25, price, location, date } = ctx.query;
+    const { page = 1, limit = 25, price, location, date, url } = ctx.query;
     const offset = (page - 1) * limit;
 
     const where = {};
@@ -26,16 +26,19 @@ router.get('/', async (ctx) => {
       end.setHours(23, 59, 59, 999);
 
       where.timestamp = {
-        [Op.between]: [start.toISOString(), end.toISOString()]
+        [Op.between]: [start.toISOString(), end.toISOString()],
       };
     }
 
+    if (url) {
+      where.url = url;
+    }
 
     const properties = await Property.findAndCountAll({
       where,
       offset,
       limit: parseInt(limit),
-      order: [['timestamp', 'DESC']],
+      order: [["timestamp", "DESC"]],
     });
 
     ctx.body = {
@@ -45,7 +48,6 @@ router.get('/', async (ctx) => {
       results: properties.rows,
     };
     ctx.status = 200;
-
   } catch (error) {
     ctx.status = 500;
     ctx.body = { error: error.message };
@@ -53,7 +55,7 @@ router.get('/', async (ctx) => {
 });
 
 // Obtener una propiedad por su id
-router.get('/:id', async (ctx) => {
+router.get("/:id", async (ctx) => {
   try {
     const { id } = ctx.params;
 
@@ -61,26 +63,34 @@ router.get('/:id', async (ctx) => {
 
     if (!property) {
       ctx.status = 404;
-      ctx.body = { error: 'Property not found' };
+      ctx.body = { error: "Property not found" };
       return;
     }
 
     ctx.body = property;
     ctx.status = 200;
-
-
-    } catch (error) {
-      ctx.status = 500;
-      ctx.body = { error: error };
-    }
+  } catch (error) {
+    ctx.status = 500;
+    ctx.body = { error: error };
+  }
 });
 
 // -------------------------------------- METODO POST ---------------------------------------------
 // crear o actualizar propiedad
-router.post('/', async (ctx) => {
+router.post("/", async (ctx) => {
   try {
-    const { 
-      name, price, currency, bedrooms, bathrooms, m2, location, img, url, is_project, timestamp
+    const {
+      name,
+      price,
+      currency,
+      bedrooms,
+      bathrooms,
+      m2,
+      location,
+      img,
+      url,
+      is_project,
+      timestamp,
     } = ctx.request.body;
 
     let property = await Property.findOne({ where: { name } });
@@ -88,17 +98,28 @@ router.post('/', async (ctx) => {
     if (property) {
       property.reservations = (property.reservations || 0) + 1;
       await property.save();
-      console.log(`Propiedad existente actualizada: ${name}, reservations: ${property.reservations}`);
+      console.log(
+        `Propiedad existente actualizada: ${name}, reservations: ${property.reservations}`
+      );
     } else {
       property = await Property.create({
-        name, price, currency, bedrooms, bathrooms,m2, location, img,url, is_project, timestamp
+        name,
+        price,
+        currency,
+        bedrooms,
+        bathrooms,
+        m2,
+        location,
+        img,
+        url,
+        is_project,
+        timestamp,
       });
       console.log(`Propiedad creada: ${name}`);
     }
 
     ctx.status = 201;
     ctx.body = property;
-
   } catch (error) {
     console.error("Error al crear/actualizar propiedad:", error);
     ctx.status = 500;
@@ -107,5 +128,3 @@ router.post('/', async (ctx) => {
 });
 
 module.exports = router;
-
-
