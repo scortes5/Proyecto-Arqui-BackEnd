@@ -90,9 +90,10 @@ const { tx } = require("../utils/trx");
 
 // POST /appointments/validate
 router.post("/validate", async (ctx) => {
-  const { request_id, deposit_token, status, reason, timestamp } = ctx.request.body;
+  const { request_id, deposit_token, status, reason, timestamp } =
+    ctx.request.body;
 
-  if (!request_id ||!deposit_token || !status || !timestamp) {
+  if (!request_id || !deposit_token || !status || !timestamp) {
     ctx.throw(400, "Request Body Incompleto");
   }
 
@@ -123,7 +124,8 @@ router.post("/validate", async (ctx) => {
 
 // POST /appointments/requests
 router.post("/requests", async (ctx) => {
-  const { request_id, deposit_token, group_id, url, timestamp } = ctx.request.body;
+  const { request_id, deposit_token, group_id, url, timestamp } =
+    ctx.request.body;
 
   if (!request_id || !group_id || !timestamp || !url) {
     ctx.throw(400, "Request Body Incompleto");
@@ -252,7 +254,7 @@ router.delete("/appointments/:request_id", async (ctx) => {
 
   ctx.status = 200;
   ctx.body = {
-    message: "Appointment Deleted"
+    message: "Appointment Deleted",
   };
 });
 
@@ -289,8 +291,11 @@ router.post("/buywebpay", async (ctx) => {
     });
 
     if (existing) {
-      console.log("Conflict detected: existing appointment");
-      ctx.throw(409, "Ya tienes una invitación pendiente para esta propiedad");
+      existing.destroy();
+      console.log(
+        "Existing appointment found and deleted:",
+        existing.request_id
+      );
     }
 
     // Compute price safely
