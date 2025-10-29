@@ -170,7 +170,7 @@ jobs:
           
           # Extraer solo el nombre del bucket
           BUCKET_NAME=$(echo "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | cut -d'/' -f1)
-          S3_KEY="grupo-XX-backend/deployment-${{ github.sha }}.zip"
+          S3_KEY="grupo-04-backend/deployment-${{ github.sha }}.zip"
           
           echo "Application: ${{ secrets.CODEDEPLOY_APPLICATION_NAME }}"
           echo "Deployment Group: ${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP }}"
