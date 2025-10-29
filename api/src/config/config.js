@@ -10,7 +10,7 @@ module.exports = {
     "host": process.env.DB_HOST,
     "dialect": "postgres",
     "pool": {
-      "max": 20,
+      "max": 40,
       "min": 0,
       "acquire": 60000,
       "idle": 10000
@@ -23,7 +23,7 @@ module.exports = {
     "host": process.env.DB_HOST,
     "dialect": "postgres",
     "pool": {
-      "max": 20,
+      "max": 40,
       "min": 0,
       "acquire": 60000,
       "idle": 10000
@@ -36,7 +36,7 @@ module.exports = {
     "host": process.env.DB_HOST,
     "dialect": "postgres",
     "pool": {
-      "max": 20,
+      "max": 40,
       "min": 0,
       "acquire": 60000,
       "idle": 10000

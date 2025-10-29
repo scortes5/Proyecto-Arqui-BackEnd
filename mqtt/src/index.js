@@ -32,12 +32,27 @@ function connectToBroker() {
     });
 
     // Al iniciar el servicio MQTT
-    setInterval(() => {
-      publishPendingAppointments();
-    }, 60000); 
-    setInterval(() => {
-      publishConfirmedAppointments();
-    }, 5000);
+    (async function confirmedLoop() {
+      try {
+        await publishConfirmedAppointments();
+      } catch (err) {
+        console.error("Error en el ciclo de 'ConfirmedAppointments':", err.message);
+      }
+      // Espera 5 segundos DESPUÉS de que termine la ejecución
+      setTimeout(confirmedLoop, 5000); 
+    })(); // El () al final la ejecuta por primera vez
+
+    // Función "loop" auto-ejecutable para citas pendientes
+    (async function pendingLoop() {
+      try {
+        await publishPendingAppointments();
+      } catch (err) {
+        console.error("Error en el ciclo de 'PendingAppointments':", err.message);
+      }
+      // Espera 5 segundos DESPUÉS de que termine la ejecución
+      setTimeout(pendingLoop, 45000);
+    })();
+    
   });
 
   client.on('message', async (topic, message) => {

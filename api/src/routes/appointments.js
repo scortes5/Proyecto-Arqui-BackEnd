@@ -7,86 +7,7 @@ const { Property } = require("../models");
 const { v4: uuidv4 } = require("uuid");
 const { tx } = require("../utils/trx");
 
-// POST /appointments/buy
-// router.post("/buy", async (ctx) => {
-//   const { userId } = ctx.state.user;
-//   const { property_id } = ctx.request.body;
-
-//   if (!property_id) {
-//     ctx.throw(400, "Id Propiedad faltante");
-//   }
-
-//   if (!userId) {
-//     ctx.throw(400, "Id Usuario faltante");
-//   }
-
-//   const property = await Property.findByPk(property_id);
-//   if (!property) {
-//     ctx.throw(404, "Propiedad no Encontrada");
-//   }
-
-//   if (property.reservations < 1) {
-//     ctx.throw(409, "No existen Reservas disponibles para la propiedad");
-//   }
-
-//   const { price, currency, url: url } = property;
-//   const property_url = url.split("#")[0];
-
-//   // UF a CLP
-//   let finalPrice = price;
-//   if (currency === "UF") {
-//     const ufResponse = await fetch("https://mindicador.cl/api/uf");
-//     const ufData = await ufResponse.json();
-
-//     if (!ufData.serie?.length) {
-//       ctx.throw(
-//         500,
-//         "Fallo conversión UF: sin datos válidos desde mindicador.cl"
-//       );
-//     }
-
-//     const ufValue = parseFloat(ufData.serie[0].valor);
-//     if (isNaN(ufValue)) ctx.throw(500, "Fallo conversión UF a CLP");
-
-//     finalPrice = price * ufValue;
-//   }
-
-//   const cost = Math.floor(finalPrice * 0.1);
-
-//   const wallet = await Wallet.findOne({ where: { user_id: userId } });
-//   if (!wallet || wallet.balance < cost) {
-//     ctx.throw(402, "Dinero Insuficiente");
-//   }
-
-//   const existing = await Appointment.findOne({
-//     where: {
-//       user_id: userId,
-//       property_url,
-//       status: { [Op.in]: ["PENDING", "ACCEPTED"] },
-//     },
-//   });
-//   if (existing)
-//     ctx.throw(409, "Ya tienes una invitacion pendiente para esta propiedad");
-
-//   const request_id = uuidv4();
-
-//   await Appointment.create({
-//     request_id,
-//     user_id: userId,
-//     group_id: "04",
-//     property_url,
-//     status: "PENDING",
-//     reason: "APPOINTMENT",
-//   });
-
-//   wallet.balance -= cost;
-//   property.reservations -= 1;
-//   await property.save();
-//   await wallet.save();
-
-//   ctx.body = { request_id, status: "PENDING" };
-//   ctx.status = 201;
-// });
+// POST /appointments/buy (borrado)
 
 // POST /appointments/validate
 router.post("/validate", async (ctx) => {
@@ -183,9 +104,11 @@ router.get("/all", async (ctx) => {
     user_id: a.user_id,
     group_id: a.group_id,
     property_url: a.property_url,
+    validation_published: a.validation_published,
     status: a.status,
     reason: a.reason,
     created_at: a.createdAt,
+    updated_at: a.updatedAt
   }));
 
   ctx.status = 200;
@@ -213,7 +136,7 @@ router.get("/status/:request_id", async (ctx) => {
 });
 
 // PATCH /appointments/:request_id
-router.patch("/appointments/:request_id", async (ctx) => {
+router.patch("/:request_id", async (ctx) => {
   const { request_id } = ctx.params;
 
   if (!request_id) {
@@ -237,7 +160,7 @@ router.patch("/appointments/:request_id", async (ctx) => {
 });
 
 // DELETE /appointments/:request_id
-router.delete("/appointments/:request_id", async (ctx) => {
+router.delete("/:request_id", async (ctx) => {
   const { request_id } = ctx.params;
 
   if (!request_id) {
@@ -286,7 +209,7 @@ router.post("/buywebpay", async (ctx) => {
       where: {
         user_id: userId,
         property_url,
-        status: { [Op.in]: ["PENDING", "ACCEPTED"] },
+        status: { [Op.in]: ["PENDING"] },
       },
     });
 
