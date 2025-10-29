@@ -28,7 +28,6 @@ function getClientStatus() {
 // ====================================================
 
 async function getPendingAppointments() {
-  console.log(process.env.API_URL);
   const response = await fetch(`${process.env.API_URL}/appointments/all`);
   
   if (!response.ok) {
@@ -47,7 +46,9 @@ async function publishPendingAppointments() {
 
   try {
     const pendingRequests = await getPendingAppointments();
-    console.log(`Se encontraron ${pendingRequests.length} solicitudes pendientes.`);
+
+    if (pendingRequests.length > 0)
+      console.log(`Se encontraron ${pendingRequests.length} solicitudes pendientes.`);
 
     for (const request of pendingRequests) {
       try {
@@ -88,13 +89,12 @@ async function publishPurchaseRequest(requestData) {
       const message = JSON.stringify(requestData);
       const channel = 'properties/requests';
 
-      console.log(`(REQUEST) Publicando: ${requestData.request_id}`);
       mqttClient.publish(channel, message, { qos: 1 }, (err) => {
         if (err) {
-          console.error('(REQUEST) Error:', err.message);
+          console.error('(publisher requests) ❌ Error:', err.message);
           reject(err);
         } else {
-          console.log(`(REQUEST) Publicado: ${requestData.request_id}`);
+          console.log(`(publisher requests) Publicado: ${requestData.request_id}`);
           resolve();
         }
       });
@@ -119,8 +119,8 @@ async function getConfirmedAppointments() {
   );
 }
 
-async function markValidationAsPublishedInDB(appointmentId) {
-  const url = `${process.env.API_URL}/appointments/${appointmentId}`;
+async function markValidationAsPublishedInDB(request_id) {
+  const url = `${process.env.API_URL}/appointments/${request_id}`;
   
   const response = await fetch(url, {
     method: 'PATCH',
@@ -129,9 +129,8 @@ async function markValidationAsPublishedInDB(appointmentId) {
   });
 
   if (!response.ok)
-    throw new Error(`API falló al marcar ${appointmentId} como publicado (${response.status})`);
+    throw new Error(`API falló al marcar ${request_id} como publicado (${response.status})`);
   
-  console.log(`(DB) Cita ${appointmentId} marcada como publicada.`);
   return await response.json();
 }
 
@@ -150,13 +149,12 @@ async function publishPurchaseValidation(validationData) {
       const message = JSON.stringify(validationData);
       const channel = 'properties/validation';
 
-      console.log(`(VALIDATION) Publicando: ${validationData.request_id} - ${validationData.status}`);
       mqttClient.publish(channel, message, { qos: 1 }, (err) => {
         if (err) {
-          console.error('(VALIDATION) Error:', err.message);
+          console.error('(publisher validation) Error:', err.message);
           reject(err);
         } else {
-          console.log(`(VALIDATION) Publicado: ${validationData.request_id}`);
+          console.log(`(publisher validation) Publicado: ${validationData.request_id}`);
           resolve();
         }
       });
@@ -178,10 +176,6 @@ async function publishConfirmedAppointments() {
 
     for (const validation of pendingValidations) {
       try {
-        if (!validation.id) {
-          console.error('Error: Objeto de cita sin "id". No se puede actualizar DB.', validation);
-          continue;
-        }
 
         await publishPurchaseValidation({
           request_id: validation.request_id,
@@ -190,7 +184,7 @@ async function publishConfirmedAppointments() {
           reason: validation.reason || (validation.status === 'ACCEPTED' ? 'Pago exitoso' : 'Pago rechazado')
         });
 
-        await markValidationAsPublishedInDB(validation.id);
+        await markValidationAsPublishedInDB(validation.request_id);
       } catch (err) {
         console.error(`Error procesando validación ${validation.request_id}:`, err.message);
       }

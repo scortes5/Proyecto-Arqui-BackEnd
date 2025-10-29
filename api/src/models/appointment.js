@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
       status: DataTypes.ENUM("PENDING", "ACCEPTED", "REJECTED", "ERROR", "OK"),
       reason: DataTypes.STRING,
       deposit_token: DataTypes.STRING,
+      validation_published: DataTypes.BOOLEAN,
     },
     {
       sequelize,

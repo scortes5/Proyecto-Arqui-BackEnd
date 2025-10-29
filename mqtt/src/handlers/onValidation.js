@@ -25,7 +25,12 @@ async function handlePropertyValidation(message) {
       return;
     }
 
-    console.log(`Validación recibida: ${validation.request_id} - Status: ${validation.status}`);
+    if (!validation.deposit_token) {
+      console.error('(onValidation) 🔑 Missing Token:', validation.request_id);
+      return;
+    }
+
+    console.log(`(onValidation) Validación recibida: ${validation.request_id} - Status: ${validation.status}`);
 
     await fibonacciRetry(async () => {
       const response = await fetch(`${process.env.API_URL}/appointments/validate`, {

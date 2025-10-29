@@ -18,13 +18,9 @@ async function handlePropertyRequest(message) {
     }
 
 
-    console.log(`(onRequest) Solicitud de compra detectada: ${request.request_id} (Grupo: ${request.group_id})`);
+    // console.log(`(onRequest) Solicitud de compra detectada: ${request.request_id} (Grupo: ${request.group_id})`);
     // Log the entire request object
     // console.log('📦 Request completa:', JSON.stringify(request, null, 2));
-    
-    if (request.details) {
-      console.log(`   Detalles: ${JSON.stringify(request.details)}`);
-    }
 
     // Enviar a la API para que descuente el stock temporalmente
     await fibonacciRetry(async () => {
