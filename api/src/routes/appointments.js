@@ -234,6 +234,28 @@ router.patch("/appointments/:request_id", async (ctx) => {
   };
 });
 
+// DELETE /appointments/:request_id
+router.delete("/appointments/:request_id", async (ctx) => {
+  const { request_id } = ctx.params;
+
+  if (!request_id) {
+    ctx.throw(400, "Falta request_id");
+  }
+
+  const appointment = await Appointment.findOne({ where: { request_id } });
+
+  if (!appointment) {
+    ctx.throw(404, "Appointment not Found");
+  }
+
+  await appointment.destroy();
+
+  ctx.status = 200;
+  ctx.body = {
+    message: "Appointment Deleted"
+  };
+});
+
 ///////////////Rutas webpay//////////////////////
 // POST /appointments/buywebpay
 
