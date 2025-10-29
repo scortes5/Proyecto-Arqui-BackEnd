@@ -9,6 +9,7 @@ router.get("/", async (ctx) => {
   try {
     const { page = 1, limit = 25, price, location, date, url } = ctx.query;
     const offset = (page - 1) * limit;
+    console.log("URL recibida:", url);
 
     const where = {};
 
@@ -31,7 +32,7 @@ router.get("/", async (ctx) => {
     }
 
     if (url) {
-      where.url = url;
+      where.url = { [Op.iLike]: `%${url}%` };
     }
 
     const properties = await Property.findAndCountAll({
