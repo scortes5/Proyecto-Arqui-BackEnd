@@ -19,8 +19,8 @@ if [ -f .env.images ]; then
 else
   # Fallback a latest si no hay archivo
   export IMAGE_TAG=latest
-  export API_IMAGE="public.ecr.aws/XXXXXXXX/grupo-XX-api:${IMAGE_TAG}"
-  export MQTT_IMAGE="public.ecr.aws/XXXXXXXX/grupo-XX-mqtt:${IMAGE_TAG}"
+  export API_IMAGE="public.ecr.aws/l6q0d4z8/grupo-04-api:${IMAGE_TAG}"
+  export MQTT_IMAGE="public.ecr.aws/l6q0d4z8/grupo-04-mqtt:${IMAGE_TAG}"
   echo "Using latest images (fallback)"
 fi
 
