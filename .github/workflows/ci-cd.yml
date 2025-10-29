@@ -157,7 +157,7 @@ jobs:
           
           # Limpiar el bucket name de posibles espacios o caracteres raros
           BUCKET_NAME=$(echo "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | tr -d '[:space:]' | sed 's/^s3:\/\///')
-          S3_KEY="grupo-XX-backend/deployment-${{ github.sha }}.zip"
+          S3_KEY="grupo-04-backend/deployment-${{ github.sha }}.zip"
           LOCAL_FILE="deployment-${{ github.sha }}.zip"
           
           echo "Bucket: '${BUCKET_NAME}'"
@@ -170,9 +170,9 @@ jobs:
             exit 1
           fi
           
-          # Subir con sintaxis explícita
+          # Subir con sintaxis explícita, ojo con pasar variables locales a aws cli
           aws s3api put-object \
-            --bucket "${BUCKET_NAME}" \
+            --bucket "${{ secrets.S3_DEPLOYMENT_BUCKET }}" \
             --key "${S3_KEY}" \
             --body "${LOCAL_FILE}" \
             --region "${{ env.AWS_REGION }}"
