@@ -10,8 +10,8 @@ services:
     environment:
       - NODE_ENV=production
       - DB_HOST=db
-      - DB_USER=${DB_USERNAME}
-      - DB_PASS=${DB_PASSWORD}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
     env_file:
       - .env
