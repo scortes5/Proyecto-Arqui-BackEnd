@@ -155,30 +155,13 @@ jobs:
         run: |
           echo "Uploading to S3..."
           
-          # Limpiar el bucket name de posibles espacios o caracteres raros
-          BUCKET_NAME=$(echo "${{ secrets.S3_DEPLOYMENT_BUCKET }}" | tr -d '[:space:]' | sed 's/^s3:\/\///')
-          S3_KEY="grupo-04-backend/deployment-${{ github.sha }}.zip"
-          LOCAL_FILE="deployment-${{ github.sha }}.zip"
-          
-          echo "Bucket: '${BUCKET_NAME}'"
-          echo "Key: '${S3_KEY}'"
-          echo "Local file: '${LOCAL_FILE}'"
-          
-          # Verificar que el archivo existe
-          if [ ! -f "${LOCAL_FILE}" ]; then
-            echo "❌ Local file not found!"
-            exit 1
-          fi
-          
-          # Subir con sintaxis explícita, ojo con pasar variables locales a aws cli
-          aws s3api put-object \
-            --bucket "${{ secrets.S3_DEPLOYMENT_BUCKET }}" \
-            --key "${S3_KEY}" \
-            --body "${LOCAL_FILE}" \
+          # Comando directo sin variables que GitHub pueda enmascarar
+          aws s3 cp \
+            "deployment-${{ github.sha }}.zip" \
+            "s3://deploy-bucket-arquisis/grupo-04-backend/deployment-${{ github.sha }}.zip" \
             --region "${{ env.AWS_REGION }}"
           
           echo "✅ Package uploaded to S3"
-          echo "S3 URI: s3://${BUCKET_NAME}/${S3_KEY}"
       
       - name: Create CodeDeploy deployment
         id: deploy
