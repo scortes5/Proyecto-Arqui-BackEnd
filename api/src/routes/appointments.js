@@ -221,26 +221,26 @@ router.post("/buywebpay", async (ctx) => {
       );
     }
 
-    // Compute price safely
     let finalPrice = property.price;
 
     if (property.currency === "UF") {
-      let ufValue = 1;
+      let ufValue;
+
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
-
+        const timeout = setTimeout(() => controller.abort(), 5000);
         const ufResponse = await fetch("https://mindicador.cl/api/uf", {
           signal: controller.signal,
         });
         clearTimeout(timeout);
-
         const ufData = await ufResponse.json();
         if (!ufData.serie?.length) throw new Error("No UF data");
         ufValue = parseFloat(ufData.serie[0].valor);
       } catch (err) {
         console.error("Error fetching UF:", err);
-        ctx.throw(500, "Fallo conversión UF");
+        const UF_DEFAULT = 35000;
+        console.warn(`Usando UF por defecto: ${UF_DEFAULT}`);
+        ufValue = UF_DEFAULT;
       }
 
       finalPrice = property.price * ufValue;
