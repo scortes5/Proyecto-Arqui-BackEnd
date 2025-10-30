@@ -238,7 +238,7 @@ router.post("/buywebpay", async (ctx) => {
         ufValue = parseFloat(ufData.serie[0].valor);
       } catch (err) {
         console.error("Error fetching UF:", err);
-        const UF_DEFAULT = 35000;
+        const UF_DEFAULT = 39500;
         console.warn(`Usando UF por defecto: ${UF_DEFAULT}`);
         ufValue = UF_DEFAULT;
       }
