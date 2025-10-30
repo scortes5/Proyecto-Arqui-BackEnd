@@ -108,7 +108,7 @@ router.get("/all", async (ctx) => {
     status: a.status,
     reason: a.reason,
     created_at: a.createdAt,
-    updated_at: a.updatedAt
+    updated_at: a.updatedAt,
   }));
 
   ctx.status = 200;
@@ -342,7 +342,7 @@ router.post("/validatewebpay", async (ctx) => {
 
   // Actualizar propiedad (descontar reserva)
   const property = await Property.findOne({
-    where: { url: appointment.property_url },
+    where: { url: { [Op.iLike]: `%${appointment.property_url}%` } },
   });
 
   if (property && property.reservations > 0) {
