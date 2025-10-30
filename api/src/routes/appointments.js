@@ -340,6 +340,21 @@ router.post("/validatewebpay", async (ctx) => {
   appointment.reason = "Pago confirmado por Webpay";
   await appointment.save();
 
+  const response = await fetch(
+    "https://abmuzxwsn4.execute-api.us-east-2.amazonaws.com/generate-pdf",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        request_id: appointment.request_id,
+        user_id: appointment.user_id,
+        property_url: appointment.property_url,
+        amount: confirmedTx.amount,
+      }),
+    }
+  );
+
+
   // Actualizar propiedad (descontar reserva)
   const property = await Property.findOne({
     where: { url: { [Op.iLike]: `%${appointment.property_url}%` } },
