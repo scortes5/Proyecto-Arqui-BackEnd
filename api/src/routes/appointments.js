@@ -340,26 +340,38 @@ router.post("/validatewebpay", async (ctx) => {
   appointment.reason = "Pago confirmado por Webpay";
   await appointment.save();
 
-  const response = await fetch(
-    "https://abmuzxwsn4.execute-api.us-east-2.amazonaws.com/generate-pdf",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: appointment.request_id,
-        user_id: appointment.user_id,
-        property_url: appointment.property_url,
-        amount: confirmedTx.amount,
-      }),
-    }
-  );
-
-
-  // Actualizar propiedad (descontar reserva)
   const property = await Property.findOne({
     where: { url: { [Op.iLike]: `%${appointment.property_url}%` } },
   });
 
+  const pdfResponse = await fetch(
+    process.env.PDF_GENERATE_URL,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        // Detalles transacción
+        request_id: appointment.request_id,
+        transaction_date: confirmedTx.transaction_date,
+        amount: confirmedTx.amount,
+        // Usuario
+        user_id: appointment.user_id,
+        // Detalles propiedad
+        property_name: property.name,
+        property_price: property.price,
+        property_currency: property.currency,
+        property_bedrooms: property.bedrooms,
+        property_bathrooms: property.bathrooms,
+        property_m2: property.m2,
+        property_location: property.location,
+        property_url: appointment.property_url,
+      }),
+    }
+  );
+
+  const pdfUrl = await pdfResponse.json();
+
+  // Actualizar propiedad (descontar reserva)
   if (property && property.reservations > 0) {
     property.reservations -= 1;
     await property.save();
@@ -370,7 +382,10 @@ router.post("/validatewebpay", async (ctx) => {
     message: "Transacción aceptada y cita confirmada",
     request_id: appointment.request_id,
     property: appointment.property_url,
+    pdf_url: pdfUrl.url
   };
+
+  console.log("ValidateWebpay response sent:", ctx.body);
 });
 
 module.exports = router;
