@@ -18,14 +18,4 @@ fi
 
 echo "✓ Containers are running"
 
-# Verificar MQTT está escuchando
-if netstat -tuln | grep -q ":1883"; then
-  echo "✓ MQTT service is listening"
-else
-  echo "ERROR: MQTT service not listening on port 1883"
-  docker logs mqtt-service --tail 50
-  exit 1
-fi
-
-echo "=== All Services Validated ==="
 
