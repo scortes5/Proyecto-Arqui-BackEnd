@@ -29,10 +29,6 @@ else
   export MQTT_IMAGE="public.ecr.aws/l6q0d4z8/grupo-04-mqtt:${IMAGE_TAG}"
 fi
 
-# Login a ECR público
-# echo "Logging in to ECR public..."
-# aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-
 # Pull de nuevas imágenes (solo API y MQTT, no DB)
 echo "Pulling new images..."
 docker-compose -f docker-compose.prod.yml pull api mqtt
