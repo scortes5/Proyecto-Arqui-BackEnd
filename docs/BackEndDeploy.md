@@ -12,7 +12,7 @@
 
 ## Comentarios Generales
 
-El workflow tiene un .env que considera la region (us-east-2) y image-TAG basado en el SHA del commit.
+El workflow tiene un .env que considera la region us-east-2, la region us-east-1 específicamente en la sección de ECR y image-TAG basado en el SHA del commit.
 
 La acumulación de Images en Docker la arreglamos incluyendo el comando:
 
@@ -232,7 +232,6 @@ git push origin master
 ```bash
 # Ejecuta: scripts/validate_service.sh
 - Verifica que los contenedores estén corriendo
-- Hace health check a la API
 - Confirma que el deployment fue exitoso
 ```
 
