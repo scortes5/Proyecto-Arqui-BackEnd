@@ -23,6 +23,7 @@ app.use(async (ctx, next) => {
   try {
     const userId = ctx.request.headers["x-user-id"];
     const userEmail = ctx.request.headers["x-user-email"];
+    console.log(userEmail)
 
     if (userId) {
       ctx.state.user = {
