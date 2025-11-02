@@ -25,12 +25,14 @@ app.use(async (ctx, next) => {
     const userEmail = ctx.request.headers["x-user-email"];
     const fullName = ctx.request.headers["x-user-full-name"];
     const phoneNumber = ctx.request.headers["x-user-phone-number"];
-    console.log(`userId:${userId}, userEmail:${userEmail}, fullName:${fullName}, phoneNumber:${phoneNumber}`)
+    // console.log(`userId:${userId}, userEmail:${userEmail}, fullName:${fullName}, phoneNumber:${phoneNumber}`)
 
     if (userId) {
       ctx.state.user = {
         userId,
-        userEmail
+        userEmail,
+        fullName,
+        phoneNumber
       };
     }
   } catch (err) {

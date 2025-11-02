@@ -357,6 +357,8 @@ router.post("/validatewebpay", async (ctx) => {
         // Usuario
         user_id: appointment.user_id,
         user_email: ctx.state.user.userEmail,
+        user_full_name: ctx.state.user.fullName,
+        user_phone_number: ctx.state.user.phoneNumber,
         // Detalles propiedad
         property_name: property.name,
         property_price: property.price,
