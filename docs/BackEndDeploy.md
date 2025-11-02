@@ -24,6 +24,8 @@ Con el comando (ls) en la instancia pueden ver los directorios disponibles: Proy
 
 Mediante paths ignore se evita que se gatillen deploys cuando se hace push a master de archivos .md o archivos en el directorio /docs.
 
+Finalmente se incorporó .dockerignore para evitar que se suban archivos innecesarios en el contexto.
+
 ## Arquitectura del Pipeline
 
 ```
