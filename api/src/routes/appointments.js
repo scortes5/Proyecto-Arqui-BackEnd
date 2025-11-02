@@ -301,6 +301,7 @@ router.post("/buywebpay", async (ctx) => {
 // POST /appointments/validatewebpay
 router.post("/validatewebpay", async (ctx) => {
   const { ws_token } = ctx.request.body;
+  const { userId, userEmail } = ctx.state.user;
 
   if (!ws_token || ws_token === "") {
     ctx.body = { message: "Transacción anulada por el usuario" };
@@ -356,6 +357,7 @@ router.post("/validatewebpay", async (ctx) => {
         amount: confirmedTx.amount,
         // Usuario
         user_id: appointment.user_id,
+        user_email: userEmail,
         // Detalles propiedad
         property_name: property.name,
         property_price: property.price,
