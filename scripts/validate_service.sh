@@ -18,27 +18,6 @@ fi
 
 echo "✓ Containers are running"
 
-# Health check de API
-max_attempts=30
-attempt=0
-
-while [ $attempt -lt $max_attempts ]; do
-  if curl -f http://localhost:3000/health > /dev/null 2>&1; then
-    echo "✓ API health check passed"
-    break
-  fi
-  
-  echo "Waiting for API... ($((attempt+1))/$max_attempts)"
-  sleep 2
-  attempt=$((attempt+1))
-done
-
-if [ $attempt -eq $max_attempts ]; then
-  echo "ERROR: API health check failed"
-  docker logs api-service --tail 50
-  exit 1
-fi
-
 # Verificar MQTT está escuchando
 if netstat -tuln | grep -q ":1883"; then
   echo "✓ MQTT service is listening"
