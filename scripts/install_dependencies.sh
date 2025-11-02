@@ -18,11 +18,4 @@ else
     echo "✓ docker-compose already installed"
 fi
 
-# Login a ECR (siempre necesario)
-#aws ecr-public get-login-password --region us-east-1 | \
-#  docker login --username AWS --password-stdin public.ecr.aws || {
-#  echo "ERROR: ECR login failed"
-#  exit 1
-#}
-
 echo "=== Dependencies Ready ==="

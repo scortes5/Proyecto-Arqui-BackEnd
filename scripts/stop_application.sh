@@ -18,4 +18,8 @@ else
   echo "⚠️ docker-compose.prod.yml not found, skipping stop"
 fi
 
+
+echo "Cleaning unused Docker images..."
+docker image prune -af --filter "label!=com.docker.compose.service=db"
+
 echo "=== Application Stopped ==="
