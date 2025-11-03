@@ -4,6 +4,7 @@ const { Property } = require("../models");
 
 router.get("/:property_id", async (ctx) => {
   const { property_id } = ctx.params;
+  console.log(`WORKERS URL = ${process.env.WORKERS_URL}`);
 
   try {
     const property = await Property.findByPk(property_id);
