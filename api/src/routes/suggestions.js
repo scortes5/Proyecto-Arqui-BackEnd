@@ -61,7 +61,9 @@ router.get("/:property_id", async (ctx) => {
       );
 
       if (!statusResponse.ok) {
-        console.error(`❌ Error al consultar job: ${statusResponse.statusText}`);
+        console.error(
+          `❌ Error al consultar job: ${statusResponse.statusText}`
+        );
         await new Promise((resolve) => setTimeout(resolve, pollInterval));
         attempts++;
         continue;
@@ -80,7 +82,11 @@ router.get("/:property_id", async (ctx) => {
       }
 
       // Job aún en proceso, esperar antes de reintentar
-      console.log(`⏳ Intento ${attempts + 1}/${maxAttempts} - Status: ${jobResult.status || "PENDING"}`);
+      console.log(
+        `⏳ Intento ${attempts + 1}/${maxAttempts} - Status: ${
+          jobResult.status || "PENDING"
+        }`
+      );
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
       attempts++;
     }
@@ -91,9 +97,46 @@ router.get("/:property_id", async (ctx) => {
       ctx.throw(504, "Timeout esperando recomendaciones del servicio");
     }
 
-    // Devolver el resultado completo
+    // Extraer los IDs de las recomendaciones
+    console.log("📦 jobResult completo:", JSON.stringify(jobResult, null, 2));
+    
+    const recommendations = jobResult?.result?.recommendations || [];
+    console.log(`📋 Recomendaciones extraídas: ${recommendations.length}`);
+    
+    if (recommendations.length === 0) {
+      console.log("⚠️ No se encontraron recomendaciones");
+      ctx.status = 200;
+      ctx.body = [];
+      return;
+    }
+
+    const propertyIds = recommendations.map((rec) => rec.id);
+    console.log(`🔍 IDs extraídos:`, propertyIds);
+    console.log(`🔍 Tipos de IDs:`, propertyIds.map(id => typeof id));
+
+    // Buscar las propiedades completas en la DB
+    const properties = await Property.findAll({
+      where: {
+        id: propertyIds,
+      },
+    });
+
+    console.log(`✅ Se encontraron ${properties.length} propiedades en la DB`);
+    
+    if (properties.length === 0) {
+      console.log("⚠️ No se encontraron propiedades en DB con esos IDs");
+      console.log("🔍 Verificando si existen propiedades con IDs similares...");
+      
+      // Buscar cualquier propiedad para comparar
+      const sampleProperty = await Property.findOne();
+      if (sampleProperty) {
+        console.log(`📝 Ejemplo de propiedad en DB - ID: ${sampleProperty.id} (tipo: ${typeof sampleProperty.id})`);
+      }
+    }
+
+    // Devolver las propiedades completas
     ctx.status = 200;
-    ctx.body = jobResult;
+    ctx.body = properties;
   } catch (error) {
     console.error("❌ Error al obtener recomendaciones:", error);
     ctx.status = error.status || 500;
