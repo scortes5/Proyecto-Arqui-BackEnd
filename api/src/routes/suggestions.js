@@ -45,7 +45,7 @@ router.get("/:property_id", async (ctx) => {
     // Ajustamos el payload al formato que espera el JobService
     const propertyToSend = {
       id: property.id,
-      name: property.name,
+      name: property.location,
       beedrooms: property.bedrooms,
       price: property.price,
     };
