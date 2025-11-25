@@ -7,7 +7,16 @@ on:
     paths-ignore:
       - 'docs/**'
       - '*.md'
+<<<<<<< HEAD
   pull_request:
+=======
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-2           
+  ECR_REGION: us-east-1           
+  IMAGE_TAG: master-${{ github.sha }}
+>>>>>>> master
 
 jobs:
   test-api:
@@ -61,6 +70,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
+<<<<<<< HEAD
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: mqtt/package-lock.json
@@ -70,6 +80,31 @@ jobs:
         run: npm ci
 
       - name: Lint (opcional)
+=======
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.ECR_REGION }}    # ✅ us-east-1 para ECR
+      
+      - name: Login to ECR Public
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+      
+      - name: Build and push API image
+        working-directory: ./api
+        run: |
+          echo "Building API image..."
+          docker build -t ${{ secrets.ECR_API_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+          docker tag ${{ secrets.ECR_API_REPOSITORY }}:${{ env.IMAGE_TAG }} ${{ secrets.ECR_API_REPOSITORY }}:latest
+          
+          echo "Pushing API image..."
+          docker push ${{ secrets.ECR_API_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          docker push ${{ secrets.ECR_API_REPOSITORY }}:latest
+          
+          echo "✅ API image pushed successfully"
+      
+      - name: Build and push MQTT image
+>>>>>>> master
         working-directory: ./mqtt
         run: |
           if [ -f "./node_modules/.bin/eslint" ]; then

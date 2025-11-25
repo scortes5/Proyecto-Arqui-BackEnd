@@ -6,6 +6,7 @@ const { Wallet } = require("../models");
 const { Property } = require("../models");
 const { v4: uuidv4 } = require("uuid");
 const { tx } = require("../utils/trx");
+const transporter = require("../utils/transporter");
 
 // POST /appointments/buy (borrado)
 
@@ -344,33 +345,50 @@ router.post("/validatewebpay", async (ctx) => {
     where: { url: { [Op.iLike]: `%${appointment.property_url}%` } },
   });
 
-  const pdfResponse = await fetch(
-    process.env.PDF_GENERATE_URL,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // Detalles transacción
-        request_id: appointment.request_id,
-        transaction_date: confirmedTx.transaction_date,
-        amount: confirmedTx.amount,
-        // Usuario
-        user_id: appointment.user_id,
-        user_email: ctx.state.user.userEmail,
-        user_full_name: ctx.state.user.fullName,
-        user_phone_number: ctx.state.user.phoneNumber,
-        // Detalles propiedad
-        property_name: property.name,
-        property_price: property.price,
-        property_currency: property.currency,
-        property_bedrooms: property.bedrooms,
-        property_bathrooms: property.bathrooms,
-        property_m2: property.m2,
-        property_location: property.location,
-        property_url: appointment.property_url,
-      }),
-    }
-  );
+  // enviar correo
+  try {
+    await transporter.sendMail({
+      from: '"G4 Market" <no-reply@g4market.tech>',
+      to: ctx.state.user.userEmail,
+      subject: `Confirmación de pago - ${appointment.request_id}`,
+      text: `Hola ${ctx.state.user.fullName}, tu pago por la propiedad ${property.name} ha sido confirmado. 
+Monto: ${confirmedTx.amount} ${property.currency}
+Fecha: ${confirmedTx.transaction_date}
+Request ID: ${appointment.request_id}`,
+      html: `<p>Hola <strong>${ctx.state.user.fullName}</strong>, tu pago por la propiedad <strong>${property.name}</strong> ha sido confirmado.</p>
+<p><strong>Monto:</strong> ${confirmedTx.amount} ${property.currency}</p>
+<p><strong>Fecha:</strong> ${confirmedTx.transaction_date}</p>
+<p><strong>Request ID:</strong> ${appointment.request_id}</p>`,
+    });
+    console.log("Correo de confirmación enviado a", ctx.state.user.userEmail);
+  } catch (err) {
+    console.error("Error enviando correo:", err);
+  }
+
+  const pdfResponse = await fetch(process.env.PDF_GENERATE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      // Detalles transacción
+      request_id: appointment.request_id,
+      transaction_date: confirmedTx.transaction_date,
+      amount: confirmedTx.amount,
+      // Usuario
+      user_id: appointment.user_id,
+      user_email: ctx.state.user.userEmail,
+      user_full_name: ctx.state.user.fullName,
+      user_phone_number: ctx.state.user.phoneNumber,
+      // Detalles propiedad
+      property_name: property.name,
+      property_price: property.price,
+      property_currency: property.currency,
+      property_bedrooms: property.bedrooms,
+      property_bathrooms: property.bathrooms,
+      property_m2: property.m2,
+      property_location: property.location,
+      property_url: appointment.property_url,
+    }),
+  });
 
   const pdfUrl = await pdfResponse.json();
 
@@ -385,7 +403,7 @@ router.post("/validatewebpay", async (ctx) => {
     message: "Transacción aceptada y cita confirmada",
     request_id: appointment.request_id,
     property: appointment.property_url,
-    pdf_url: pdfUrl.url
+    pdf_url: pdfUrl.url,
   };
 
   console.log("ValidateWebpay response sent:", ctx.body);
