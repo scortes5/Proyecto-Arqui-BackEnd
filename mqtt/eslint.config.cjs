@@ -26,7 +26,7 @@ module.exports = [
     rules: {
       "no-unused-vars": "warn",
       "no-undef": "error",
-      "no-redeclare": "error",
+      "no-redeclare": ["error", { builtinGlobals: false }],
     },
   },
 

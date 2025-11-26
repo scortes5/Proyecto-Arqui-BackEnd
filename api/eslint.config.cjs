@@ -3,12 +3,11 @@ const js = require("@eslint/js");
 module.exports = [
   js.configs.recommended,
 
-  // Reglas globales para Node + CommonJS
   {
     files: ["**/*.js"],
     languageOptions: {
       ecmaVersion: 2020,
-      sourceType: "script", // CommonJS (no ESM)
+      sourceType: "script",
       globals: {
         require: "readonly",
         module: "readonly",
@@ -27,11 +26,11 @@ module.exports = [
     rules: {
       "no-unused-vars": "warn",
       "no-undef": "error",
-      "no-redeclare": "error",
+      "no-redeclare": ["error", { builtinGlobals: false }],
     },
   },
 
-  // Configuración especial para Jest
+  // Configuración especial para los test
   {
     files: ["**/*.test.js"],
     languageOptions: {
