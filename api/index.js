@@ -25,18 +25,19 @@ app.use(async (ctx, next) => {
     const userEmail = ctx.request.headers["x-user-email"];
     const fullName = ctx.request.headers["x-user-full-name"];
     const phoneNumber = ctx.request.headers["x-user-phone-number"];
-    // console.log(`userId:${userId}, userEmail:${userEmail}, fullName:${fullName}, phoneNumber:${phoneNumber}`)
+    const isAdmin = ctx.request.headers["x-is-admin"] === "true";
 
     if (userId) {
       ctx.state.user = {
         userId,
         userEmail,
         fullName,
-        phoneNumber
+        phoneNumber,
+        isAdmin
       };
     }
   } catch (err) {
-    console.error("Error al obtener el userId:", err);
+    console.error("Error al obtener info del usuario:", err);
   }
   await next();
 });
