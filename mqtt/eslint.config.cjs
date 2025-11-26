@@ -1,15 +1,17 @@
-import js from "@eslint/js";
+const js = require("@eslint/js");
 
-export default [
+module.exports = [
   js.configs.recommended,
+
   {
     files: ["**/*.js"],
     languageOptions: {
       ecmaVersion: 2020,
-      sourceType: "script", 
+      sourceType: "script",
       globals: {
         require: "readonly",
         module: "readonly",
+        exports: "readonly",
         __dirname: "readonly",
         __filename: "readonly",
         process: "readonly",
@@ -24,8 +26,11 @@ export default [
     rules: {
       "no-unused-vars": "warn",
       "no-undef": "error",
+      "no-redeclare": "error",
     },
   },
+
+  // Configuración especial para los test
   {
     files: ["**/*.test.js"],
     languageOptions: {
@@ -40,4 +45,5 @@ export default [
     },
   },
 ];
+
 
