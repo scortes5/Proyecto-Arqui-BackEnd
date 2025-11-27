@@ -7,3 +7,5 @@ const requireAdmin = async (ctx, next) => {
   }
   await next();
 };
+
+module.exports = requireAdmin;
