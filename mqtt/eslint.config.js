@@ -1,4 +1,5 @@
 const js = require("@eslint/js");
+const globals = require("globals");
 
 module.exports = [
   js.configs.recommended,
@@ -10,7 +11,6 @@ module.exports = [
       sourceType: "script",
       globals: {
         require: "readonly",
-        ...globals.jest,
         module: "readonly",
         exports: "readonly",
         __dirname: "readonly",
@@ -22,6 +22,8 @@ module.exports = [
         clearTimeout: "readonly",
         AbortController: "readonly",
         fetch: "readonly",
+        ...globals.node,
+        ...globals.jest,
       },
     },
     rules: {
@@ -31,7 +33,7 @@ module.exports = [
     },
   },
 
-  // Configuración especial para los test
+  // Configuración especial para tests
   {
     files: ["**/*.test.js"],
     languageOptions: {
@@ -46,5 +48,6 @@ module.exports = [
     },
   },
 ];
+
 
 
