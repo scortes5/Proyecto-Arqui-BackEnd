@@ -1,0 +1,42 @@
+const Koa = require("koa");
+const Logger = require("koa-logger");
+const bodyParser = require("koa-bodyparser");
+const router = require("./src");
+const cors = require("@koa/cors");
+
+const app = new Koa();
+
+app.use(bodyParser({
+  enableTypes: ['json', 'form', 'text'],
+  extendTypes: {
+    json: ['application/x-javascript']
+  }
+}));
+
+app.use(Logger());
+app.use(cors());
+
+app.use(async (ctx, next) => {
+  try {
+    const userId = ctx.request.headers["x-user-id"];
+    const userEmail = ctx.request.headers["x-user-email"];
+    const fullName = ctx.request.headers["x-user-full-name"];
+    const phoneNumber = ctx.request.headers["x-user-phone-number"];
+
+    if (userId) {
+      ctx.state.user = { 
+        userId, 
+        userEmail, 
+        fullName,
+        phoneNumber };
+    }
+  } catch (err) {
+    console.error("Error al obtener el userId:", err);
+  }
+
+  await next();
+});
+
+app.use(router.routes()).use(router.allowedMethods());
+
+module.exports = app;
