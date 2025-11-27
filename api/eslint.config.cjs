@@ -10,6 +10,7 @@ module.exports = [
       sourceType: "script",
       globals: {
         require: "readonly",
+        ...globals.jest,
         module: "readonly",
         exports: "readonly",
         __dirname: "readonly",
