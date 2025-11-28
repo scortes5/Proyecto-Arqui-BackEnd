@@ -18,20 +18,18 @@ app.use(cors());
 
 app.use(async (ctx, next) => {
   try {
-    const userId = ctx.request.headers["x-user-id"];
-    const userEmail = ctx.request.headers["x-user-email"];
-    const fullName = ctx.request.headers["x-user-full-name"];
-    const phoneNumber = ctx.request.headers["x-user-phone-number"];
+    const headers = ctx.request.headers;
 
-    if (userId) {
-      ctx.state.user = { 
-        userId, 
-        userEmail, 
-        fullName,
-        phoneNumber };
-    }
+    ctx.state.user = {
+      userId: headers["x-user-id"] || null,
+      userEmail: headers["x-user-email"] || null,
+      fullName: headers["x-user-full-name"] || null,
+      phoneNumber: headers["x-user-phone-number"] || null,
+      isAdmin: headers["x-is-admin"] === "true",
+      roles: headers["x-roles"] || "",
+    };
   } catch (err) {
-    console.error("Error al obtener el userId:", err);
+    console.error("Error al obtener info del usuario:", err);
   }
 
   await next();
