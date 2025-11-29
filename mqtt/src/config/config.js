@@ -14,6 +14,7 @@ const MQTT_CONFIG = {
     PROPERTIES_INFO: 'properties/info',
     PROPERTIES_REQUESTS: 'properties/requests',
     PROPERTIES_VALIDATION: 'properties/validation',
+    PROPERTIES_AUCTIONS: 'properties/auctions'
   },
 };
 
