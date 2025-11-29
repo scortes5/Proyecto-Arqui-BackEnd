@@ -25,12 +25,12 @@ async function handlePropertyValidation(message) {
       return;
     }
 
-    if (!validation.deposit_token) {
-      console.error('(onValidation) 🔑 Missing Token:', validation.request_id);
-      return;
-    }
+    // if (!validation.deposit_token) {
+    //   console.error('(onValidation) 🔑 Missing Token:', validation.request_id);
+    //   return;
+    // }
 
-    console.log(`(onValidation) Validación recibida: ${validation.request_id} - Status: ${validation.status}`);
+    // console.log(`(onValidation) Validación recibida: ${validation.request_id} - Status: ${validation.status}`);
 
     await fibonacciRetry(async () => {
       const response = await fetch(`${process.env.API_URL}/appointments/validate`, {
@@ -41,7 +41,7 @@ async function handlePropertyValidation(message) {
         body: JSON.stringify(validation),
       });
 
-      if (!response.ok) {
+      if (response.status >= 500 && response.status < 600) {
         const errorText = await response.text();
         
         

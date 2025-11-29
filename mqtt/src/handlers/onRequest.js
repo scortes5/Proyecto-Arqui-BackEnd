@@ -12,10 +12,10 @@ async function handlePropertyRequest(message) {
       return;
     }
 
-    if (!request.deposit_token) {
-      // console.error('(onRequest) 🔑 Solicitud sin token');
-      return;
-    }
+    // if (!request.deposit_token) {
+    //   console.error('(onRequest) 🔑 Solicitud sin token');
+    //   return;
+    // }
 
 
     // console.log(`(onRequest) Solicitud de compra detectada: ${request.request_id} (Grupo: ${request.group_id})`);
@@ -36,7 +36,7 @@ async function handlePropertyRequest(message) {
       }
 
       const result = await response.json();
-      console.log(`(onRequest) ✅ Solicitud registrada: ${request.request_id}`);
+      // console.log(`(onRequest) ✅ Solicitud registrada: ${request.request_id}`);
       return result;
     });
 

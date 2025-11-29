@@ -77,7 +77,7 @@ async function publishPendingAppointments() {
 async function publishPurchaseRequest(requestData) {
   if (!isClientReady()) throw new Error('Cliente MQTT no inicializado');
 
-  const requiredFields = ['request_id', 'deposit_token', 'group_id', 'url', 'timestamp'];
+  const requiredFields = ['request_id', 'group_id', 'url', 'timestamp'];
   const missingFields = requiredFields.filter(field => !requestData[field]);
   if (missingFields.length > 0)
     throw new Error(`Faltan campos de REQUEST: ${missingFields.join(', ')}`);
@@ -94,7 +94,7 @@ async function publishPurchaseRequest(requestData) {
           console.error('(publisher requests) ❌ Error:', err.message);
           reject(err);
         } else {
-          console.log(`(publisher requests) Publicado: ${requestData.request_id}`);
+          // console.log(`(publisher requests) Publicado: ${requestData.request_id}`);
           resolve();
         }
       });
