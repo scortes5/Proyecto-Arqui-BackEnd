@@ -42,7 +42,7 @@ async function handleAuctionMessage(message) {
         // Enviar mensaje al backend interno con retry
         await fibonacciRetry(async () => {
             const response = await fetch(
-                `${process.env.API_URL}/appointments/auctions`,
+                `${process.env.API_URL}/groupAppointments/auctions`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
