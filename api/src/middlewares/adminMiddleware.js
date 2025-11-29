@@ -8,4 +8,8 @@ const requireAdmin = async (ctx, next) => {
   await next();
 };
 
+<<<<<<< Updated upstream
 module.exports = requireAdmin;
+=======
+module.exports = requireAdmin;
+>>>>>>> Stashed changes
