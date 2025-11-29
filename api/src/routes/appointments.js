@@ -409,4 +409,11 @@ Request ID: ${appointment.request_id}`,
   console.log("ValidateWebpay response sent:", ctx.body);
 });
 
+
+router.post("/group/buy", async (ctx) => {
+  ctx.body = {
+    message: `Endpoint para comprar agendamientos disponibles para el grupo, disponible para usuario`,
+  };
+});
+
 module.exports = router;
