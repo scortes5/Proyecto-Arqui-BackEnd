@@ -47,9 +47,9 @@ app.use(async (ctx, next) => {
       roles: getHeader("x-roles") || "",
     };
 
-    if (!ctx.state.user.userId && ctx.path !== '/test' && ctx.path !== '/debug') {
-      console.warn(`⚠️ No userId found for path: ${ctx.path}`);
-    }
+    // if (!ctx.state.user.userId && ctx.path !== '/test' && ctx.path !== '/debug') {
+    //   console.warn(`⚠️ No userId found for path: ${ctx.path}`);
+    // }
 
   } catch (err) {
 
@@ -69,7 +69,9 @@ app.use(async (ctx, next) => {
 app.use(router.routes()).use(router.allowedMethods());
 
 app.on('error', (err, ctx) => {
-  console.error('❌ Server error:', err);
+  if (ctx.status >= 500) {
+    console.error('❌ Server error:', err);
+  }
 });
 
 module.exports = app;

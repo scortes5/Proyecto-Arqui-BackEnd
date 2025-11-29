@@ -15,7 +15,7 @@ router.post("/validate", async (ctx) => {
   const { request_id, deposit_token, status, reason, timestamp } =
     ctx.request.body;
 
-  if (!request_id || !deposit_token || !status || !timestamp) {
+  if (!request_id || !status || !timestamp) {
     ctx.throw(400, "Request Body Incompleto");
   }
 
@@ -33,6 +33,7 @@ router.post("/validate", async (ctx) => {
 
   // Actualizar estado
   appointment.status = status;
+  appointment.deposit_token = deposit_token;
   appointment.reason = reason || "-";
   await appointment.save();
 
@@ -109,7 +110,7 @@ router.get("/all", async (ctx) => {
     status: a.status,
     reason: a.reason,
     created_at: a.createdAt,
-    updated_at: a.updatedAt,
+    updated_at: a.updatedAt,       
   }));
 
   ctx.status = 200;
