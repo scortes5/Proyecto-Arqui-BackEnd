@@ -185,7 +185,7 @@ router.delete("/:request_id", async (ctx) => {
 ///////////////Rutas webpay//////////////////////
 // POST /appointments/buywebpay
 
-router.post("/buywebpay", async (ctx) => {
+router.post("/buy", async (ctx) => {
   console.log("=== /buywebpay called ===");
   console.log("Headers:", ctx.request.headers);
   console.log("Body:", ctx.request.body);
@@ -299,8 +299,8 @@ router.post("/buywebpay", async (ctx) => {
   }
 });
 
-// POST /appointments/validatewebpay
-router.post("/validatewebpay", async (ctx) => {
+// POST /appointments/validatebuy
+router.post("/validatebuy", async (ctx) => {
   const { ws_token } = ctx.request.body;
 
   if (!ws_token || ws_token === "") {
