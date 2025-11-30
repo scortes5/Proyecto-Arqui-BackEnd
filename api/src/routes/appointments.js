@@ -7,6 +7,7 @@ const { Property } = require("../models");
 const { v4: uuidv4 } = require("uuid");
 const { tx } = require("../utils/trx");
 const transporter = require("../utils/transporter");
+const appointmentService = require("../services/appointmentService");
 
 // POST /appointments/buy (borrado)
 
@@ -187,7 +188,7 @@ router.delete("/:request_id", async (ctx) => {
 // POST /appointments/buywebpay
 
 router.post("/buy", async (ctx) => {
-  console.log("=== /buywebpay called ===");
+  console.log("=== /buy called ===");
   console.log("Headers:", ctx.request.headers);
   console.log("Body:", ctx.request.body);
   console.log("ctx.state.user:", ctx.state.user);
@@ -206,95 +207,47 @@ router.post("/buy", async (ctx) => {
 
     const property_url = property.url.split("#")[0];
 
-    // Check for existing appointment
-    const existing = await Appointment.findOne({
-      where: {
-        user_id: userId,
-        property_url,
-        status: { [Op.in]: ["PENDING"] },
-      },
-    });
+    // Eliminar appointments pendientes existentes
+    await appointmentService.deletePendingAppointments(userId, property_url);
 
-    if (existing) {
-      existing.destroy();
-      console.log(
-        "Existing appointment found and deleted:",
-        existing.request_id
-      );
-    }
-
-    let finalPrice = property.price;
-
-    if (property.currency === "UF") {
-      let ufValue;
-
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-        const ufResponse = await fetch("https://mindicador.cl/api/uf", {
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        const ufData = await ufResponse.json();
-        if (!ufData.serie?.length) throw new Error("No UF data");
-        ufValue = parseFloat(ufData.serie[0].valor);
-      } catch (err) {
-        console.error("Error fetching UF:", err);
-        const UF_DEFAULT = 39500;
-        console.warn(`Usando UF por defecto: ${UF_DEFAULT}`);
-        ufValue = UF_DEFAULT;
-      }
-
-      finalPrice = property.price * ufValue;
-    }
-
+    // Calcular precio final
+    const finalPrice = await appointmentService.calculateFinalPrice(property);
     const cost = Math.floor(finalPrice * 0.1);
 
-    // Create appointment
-    const request_id = uuidv4();
-    const newAppointment = await Appointment.create({
-      request_id,
-      user_id: userId,
-      group_id: "04",
+    // Crear appointment
+    const newAppointment = await appointmentService.createAppointment(
+      userId,
       property_url,
-      status: "PENDING",
-      reason: "APPOINTMENT",
-    });
+      "04"
+    );
 
-    const buyOrder = request_id.slice(0, 26);
+    // Crear transacción Webpay
+    const redirectUrl =
+      process.env.REDIRECT_URL || "http://localhost:5173/completed-purchase";
+    const trx = await appointmentService.createWebpayTransaction(
+      newAppointment.request_id,
+      cost,
+      redirectUrl
+    );
 
-    // Create transaction
-    let trx;
-    try {
-      trx = await tx.create(
-        buyOrder,
-        "test-iic2173",
-        cost,
-        process.env.REDIRECT_URL || "http://localhost:5173/completed-purchase"
-      );
-    } catch (err) {
-      console.error("Error creating WebPay transaction:", err);
-      ctx.throw(500, "Fallo al crear transacción Webpay");
-    }
-
-    await Appointment.update(
-      { deposit_token: trx.token },
-      { where: { request_id: newAppointment.request_id } }
+    // Actualizar token del appointment
+    await appointmentService.updateAppointmentToken(
+      newAppointment.request_id,
+      trx.token
     );
 
     // Response
     ctx.status = 201;
     ctx.body = {
-      request_id,
+      request_id: newAppointment.request_id,
       status: "PENDING",
       deposit_token: trx.token,
       url: trx.url,
     };
 
-    console.log("BuyWebpay response sent:", ctx.body);
+    console.log("Buy response sent:", ctx.body);
   } catch (err) {
-    console.error("Error in /buywebpay:", err);
-    // Aseguramos JSON en cualquier error
+    console.error("Error in /buy:", err);
     ctx.status = err.status || 500;
     ctx.body = { error: err.message || "Error interno del servidor" };
   }
@@ -310,104 +263,66 @@ router.post("/validatebuy", async (ctx) => {
     return;
   }
 
-  // Confirmar transacción en Webpay
-  const confirmedTx = await tx.commit(ws_token);
+  try {
+    // Confirmar transacción y obtener appointment
+    const { appointment, confirmedTx } =
+      await appointmentService.confirmWebpayTransaction(ws_token);
 
-  // Buscar la cita asociada a este token
-  const appointment = await Appointment.findOne({
-    where: { deposit_token: ws_token },
-  });
+    // Procesar resultado de la transacción
+    const isApproved = await appointmentService.processTransactionResult(
+      appointment,
+      confirmedTx
+    );
 
-  if (!appointment) {
-    ctx.throw(404, "Cita no encontrada para el token proporcionado");
-  }
+    if (!isApproved) {
+      ctx.body = {
+        message: "Transacción rechazada",
+        request_id: appointment.request_id,
+        property: appointment.property_url,
+      };
+      ctx.status = 200;
+      return;
+    }
 
-  if (confirmedTx.response_code != 0) {
-    // Transacción rechazada
-    appointment.status = "REJECTED";
-    appointment.reason = "Pago rechazado por Webpay";
-    await appointment.save();
+    // Buscar propiedad
+    const property = await Property.findOne({
+      where: { url: { [Op.iLike]: `%${appointment.property_url}%` } },
+    });
 
+    // Enviar correo de confirmación
+    await appointmentService.sendConfirmationEmail(
+      ctx.state.user.userEmail,
+      ctx.state.user.fullName,
+      property,
+      appointment,
+      confirmedTx
+    );
+
+    // Generar PDF
+    const pdfUrl = await appointmentService.generateConfirmationPDF(
+      appointment,
+      confirmedTx,
+      ctx.state.user,
+      property
+    );
+
+    // Actualizar reservaciones de la propiedad
+    await appointmentService.decrementPropertyReservations(property);
+
+    ctx.status = 200;
     ctx.body = {
-      message: "Transacción rechazada",
+      message: "Transacción aceptada y cita confirmada",
       request_id: appointment.request_id,
       property: appointment.property_url,
+      pdf_url: pdfUrl,
     };
-    ctx.status = 200;
-    return;
-  }
 
-  // Transacción aprobada
-  appointment.status = "ACCEPTED";
-  appointment.reason = "Pago confirmado por Webpay";
-  await appointment.save();
-
-  const property = await Property.findOne({
-    where: { url: { [Op.iLike]: `%${appointment.property_url}%` } },
-  });
-
-  // enviar correo
-  try {
-    await transporter.sendMail({
-      from: '"G4 Market" <no-reply@g4market.tech>',
-      to: ctx.state.user.userEmail,
-      subject: `Confirmación de pago - ${appointment.request_id}`,
-      text: `Hola ${ctx.state.user.fullName}, tu pago por la propiedad ${property.name} ha sido confirmado. 
-Monto: ${confirmedTx.amount} ${property.currency}
-Fecha: ${confirmedTx.transaction_date}
-Request ID: ${appointment.request_id}`,
-      html: `<p>Hola <strong>${ctx.state.user.fullName}</strong>, tu pago por la propiedad <strong>${property.name}</strong> ha sido confirmado.</p>
-<p><strong>Monto:</strong> ${confirmedTx.amount} ${property.currency}</p>
-<p><strong>Fecha:</strong> ${confirmedTx.transaction_date}</p>
-<p><strong>Request ID:</strong> ${appointment.request_id}</p>`,
-    });
-    console.log("Correo de confirmación enviado a", ctx.state.user.userEmail);
+    console.log("ValidateWebpay response sent:", ctx.body);
   } catch (err) {
-    console.error("Error enviando correo:", err);
+    console.error("Error in /validatebuy:", err);
+    ctx.status = err.status || 500;
+    ctx.body = { error: err.message || "Error interno del servidor" };
   }
-
-  const pdfResponse = await fetch(process.env.PDF_GENERATE_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      // Detalles transacción
-      request_id: appointment.request_id,
-      transaction_date: confirmedTx.transaction_date,
-      amount: confirmedTx.amount,
-      // Usuario
-      user_id: appointment.user_id,
-      user_email: ctx.state.user.userEmail,
-      user_full_name: ctx.state.user.fullName,
-      user_phone_number: ctx.state.user.phoneNumber,
-      // Detalles propiedad
-      property_name: property.name,
-      property_price: property.price,
-      property_currency: property.currency,
-      property_bedrooms: property.bedrooms,
-      property_bathrooms: property.bathrooms,
-      property_m2: property.m2,
-      property_location: property.location,
-      property_url: appointment.property_url,
-    }),
-  });
-
-  const pdfUrl = await pdfResponse.json();
-
-  // Actualizar propiedad (descontar reserva)
-  if (property && property.reservations > 0) {
-    property.reservations -= 1;
-    await property.save();
-  }
-
-  ctx.status = 200;
-  ctx.body = {
-    message: "Transacción aceptada y cita confirmada",
-    request_id: appointment.request_id,
-    property: appointment.property_url,
-    pdf_url: pdfUrl.url,
-  };
-
-  console.log("ValidateWebpay response sent:", ctx.body);
 });
 
 

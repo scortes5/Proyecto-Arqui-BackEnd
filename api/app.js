@@ -1,8 +1,14 @@
 const Koa = require("koa");
 const bodyParser = require("koa-bodyparser");
 const router = require("./src");
-
+const cors = require("@koa/cors"); // ← agregado
 const app = new Koa();
+
+
+app.use(cors({
+  origin: "*"
+}));
+
 
 app.use(bodyParser({
   enableTypes: ['json', 'form', 'text'],
