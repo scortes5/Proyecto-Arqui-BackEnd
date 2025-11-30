@@ -75,9 +75,9 @@ app.use(async (ctx, next) => {
 app.use(router.routes()).use(router.allowedMethods());
 
 app.on('error', (err, ctx) => {
-  if (ctx.status >= 500) {
+  // if (ctx.status >= 500) {
     console.error('❌ Server error:', err);
-  }
+  // }
 });
 
 module.exports = app;

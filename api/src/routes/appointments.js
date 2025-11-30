@@ -1,9 +1,9 @@
 const Router = require("@koa/router");
 const router = new Router();
 const { Op } = require("sequelize");
-const { Appointment } = require("../models");
-const { Wallet } = require("../models");
-const { Property } = require("../models");
+
+const { sequelize, Appointment, Wallet, Property, GroupAppointment } = require("../models");
+
 const { v4: uuidv4 } = require("uuid");
 const { tx } = require("../utils/trx");
 const transporter = require("../utils/transporter");
@@ -196,7 +196,7 @@ router.post("/buy", async (ctx) => {
   try {
     const { userId } = ctx.state.user;
     const { property_id } = ctx.request.body;
-
+    
     if (!property_id) ctx.throw(400, "Id Propiedad faltante");
     if (!userId) ctx.throw(400, "Id Usuario faltante");
 
@@ -327,9 +327,88 @@ router.post("/validatebuy", async (ctx) => {
 
 
 router.post("/group/buy", async (ctx) => {
-  ctx.body = {
-    message: `Endpoint para comprar agendamientos disponibles para el grupo, disponible para usuario`,
-  };
+  console.log("=== /buy called (Group Logic) ===");
+  
+  const t = await sequelize.transaction();
+
+  try {
+    const { userId } = ctx.state.user;
+    const { property_id } = ctx.request.body;
+
+    if (!property_id) ctx.throw(400, "Id Propiedad faltante");
+    if (!userId) ctx.throw(400, "Id Usuario faltante");
+
+    const groupStock = await GroupAppointment.findOne({
+      where: { 
+        property_id: property_id,
+        quantity: { [Op.gt]: 0 } 
+      },
+      lock: t.LOCK.UPDATE, 
+      transaction: t
+    });
+
+    if (!groupStock) {
+      await t.rollback();
+      ctx.throw(404, "No hay agendamientos disponibles para esta propiedad en este momento.");
+    }
+
+    const property = await Property.findByPk(property_id, { transaction: t });
+    if (!property) {
+      await t.rollback();
+      ctx.throw(404, "Propiedad base no encontrada");
+    }
+    const property_url = property.url.split("#")[0];
+
+    await appointmentService.deletePendingAppointments(userId, property_url); 
+    const basePrice = groupStock.price; 
+    
+    let finalPrice = basePrice;
+    if (groupStock.discount) {
+        finalPrice = basePrice * (1 - groupStock.discount);
+    }
+    
+    const cost = Math.floor(finalPrice); 
+    await groupStock.decrement('quantity', { transaction: t });
+    const newAppointment = await appointmentService.createAppointment(
+      userId,
+      property_url,
+      "04" 
+    );
+
+    await t.commit();
+
+    const redirectUrl = process.env.REDIRECT_URL || "http://localhost:5173/completed-purchase";
+    
+    const trx = await appointmentService.createWebpayTransaction(
+      newAppointment.request_id,
+      cost,
+      redirectUrl
+    );
+
+    await appointmentService.updateAppointmentToken(
+      newAppointment.request_id,
+      trx.token
+    );
+
+    ctx.status = 201;
+    ctx.body = {
+      request_id: newAppointment.request_id,
+      status: "PENDING",
+      deposit_token: trx.token,
+      url: trx.url,
+      price_paid: cost 
+    };
+
+    console.log("Group Buy response sent:", ctx.body);
+
+  } catch (err) {
+    if (!t.finished) {
+        await t.rollback();
+    }
+    console.error("Error in /group/buy:", err);
+    ctx.status = err.status || 500;
+    ctx.body = { error: err.message || "Error interno del servidor" };
+  }
 });
 
 module.exports = router;
