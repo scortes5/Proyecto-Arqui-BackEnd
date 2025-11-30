@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "cors": "^2.8.5",
-    "newrelic": "^13.4.0"
+    "newrelic": "^13.4.0",
+    "nodemailer": "^7.0.11"
   }
 }

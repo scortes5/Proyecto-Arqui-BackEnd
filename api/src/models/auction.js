@@ -1,0 +1,50 @@
+"use strict";
+const { Model } = require("sequelize");
+
+module.exports = (sequelize, DataTypes) => {
+    class Auction extends Model {
+        static associate(models) {
+            // Si quieres asociarlo con propiedades o grupos, aquí va.
+        }
+    }
+
+    Auction.init(
+        {
+            auction_id: {
+                type: DataTypes.UUID,
+                defaultValue: DataTypes.UUIDV4,
+                primaryKey: true,
+            },
+            proposal_id: {
+                type: DataTypes.STRING,
+                allowNull: true,
+            },
+            url: {
+                type: DataTypes.STRING,
+                allowNull: true,
+            },
+            timestamp: {
+                type: DataTypes.DATE,
+                allowNull: false,
+            },
+            quantity: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+            },
+            group_id: {
+                type: DataTypes.STRING,
+                allowNull: false,
+            },
+            operation: {
+                type: DataTypes.ENUM("offer", "proposal", "acceptance", "rejection"),
+                allowNull: false,
+            },
+        },
+        {
+            sequelize,
+            modelName: "Auction",
+        }
+    );
+
+    return Auction;
+};

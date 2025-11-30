@@ -3,6 +3,7 @@ const router = new Router();
 const { Op } = require("sequelize");
 const { Property } = require("../models");
 const requireAdmin = require("../middlewares/adminMiddleware");
+const db = require("../models");
 
 // -------------------------------------- METODO GET ---------------------------------------------
 // obtener todas las propiedades
@@ -131,9 +132,64 @@ router.post("/", async (ctx) => {
 
 // SOLO ADMIN
 router.post("/auctions", requireAdmin, async (ctx) => {
-  ctx.body = {
-    message: `Endpoints para crear una subasta. Disponible para admin`,
-  };
+  try {
+    const auction = req.body;
+
+    // Validar campo operation
+    if (!auction.operation) {
+      return res.status(400).json({ error: "Missing operation field" });
+    }
+    console.log("Recibido:", auction.operation, auction);
+
+    // Lógica según tipo de operación
+    if (auction.operation === "offer") {
+
+      // ---- LÓGICA PARA OFFER ----
+      console.log("Procesando OFFER");
+
+      return res.json({ status: "offer processed" });
+    }
+
+    if (auction.operation === "proposal") {
+
+      // ---- LÓGICA PARA PROPOSAL ----
+      console.log("Procesando PROPOSAL");
+
+      // Ej: guardar propuesta
+      // await db.Proposal.create(auction);
+
+      return res.json({ status: "proposal processed" });
+    }
+
+    if (auction.operation === "acceptance") {
+
+      // ---- LÓGICA PARA ACCEPTANCE ----
+      console.log("Procesando ACCEPTANCE");
+
+      // Ej: marcar propuesta como aceptada
+      // await db.Proposal.update(...);
+
+      return res.json({ status: "acceptance processed" });
+    }
+
+    if (auction.operation === "rejection") {
+
+      // ---- LÓGICA PARA REJECTION ----
+      console.log("Procesando REJECTION");
+
+      // Ej: marcar propuesta como rechazada
+      // await db.Proposal.update(...);
+
+      return res.json({ status: "rejection processed" });
+    }
+
+    // Si mandan un operation inválido
+    return res.status(400).json({ error: "Invalid operation" });
+
+  } catch (err) {
+    console.error("Error en /properties/auctions:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 
