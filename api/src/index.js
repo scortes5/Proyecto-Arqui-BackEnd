@@ -12,5 +12,6 @@ router.use("/properties", properties.routes());
 router.use("/appointments", appointments.routes());
 router.use("/suggestions", suggestions.routes());
 router.use("/groupAppointments", groupAppointments.routes());
+router.use("/auctions", auctions.routes());
 
 module.exports = router;
