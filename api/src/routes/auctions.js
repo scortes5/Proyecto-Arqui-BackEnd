@@ -1,4 +1,5 @@
 const Router = require("@koa/router");
+const requireAdmin = require("../middlewares/adminMiddleware");
 const { auction } = require("../models");
 const router = new Router();
 
