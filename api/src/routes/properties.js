@@ -128,4 +128,13 @@ router.post("/", async (ctx) => {
   }
 });
 
+// SOLO ADMIN
+router.post("/auctions", requireAdmin, async (ctx) => {
+  ctx.body = {
+    message: `Endpoints para crear una subasta. Disponible para admin`,
+  };
+});
+
+
+
 module.exports = router;

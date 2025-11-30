@@ -1,5 +1,5 @@
 const Router = require("@koa/router");
-const requireAdmin = require("../middlewares/adminMiddleware"); 
+const requireAdmin = require("../middlewares/adminMiddleware");
 const router = new Router();
 
 
@@ -23,14 +23,6 @@ router.post("/:propertyId/discount", requireAdmin, async (ctx) => {
     message: `Endpoints para aplicar descuento a un agendamiento para el grupo. Disponible para admin`,
   };
 });
-
-// SOLO ADMIN
-router.post("/auctions", requireAdmin, async (ctx) => {
-  ctx.body = {
-    message: `Endpoints para crear una subasta. Disponible para admin`,
-  };
-});
-
 
 
 
