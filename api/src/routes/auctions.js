@@ -1,10 +1,10 @@
 const Router = require("@koa/router");
 const requireAdmin = require("../middlewares/adminMiddleware");
-const { auction } = require("../models");
+const { Auction } = require("../models");
 const router = new Router();
 
 router.get("/", async (ctx) => {
-    const auctions = await auction.findAll({
+    const auctions = await Auction.findAll({
         order: [["createdAt", "DESC"]],
     });
 
@@ -39,7 +39,7 @@ router.post("/", async (ctx) => {
     // OPERATION = "offer"
     // ------------------------------------------
     if (operation === "offer") {
-        const newOffer = await auction.create({
+        const newOffer = await Auction.create({
             auction_id,
             proposal_id,
             url,
@@ -61,7 +61,7 @@ router.post("/", async (ctx) => {
     // OPERATION = "proposal"
     // ------------------------------------------
     if (operation === "proposal") {
-        const offer = await auction.findOne({
+        const offer = await Auction.findOne({
             where: {
                 auction_id,
                 operation: "offer",
@@ -76,7 +76,7 @@ router.post("/", async (ctx) => {
             ctx.throw(400, "El offer previo no tiene group_id == 4");
         }
 
-        const newProposal = await auction.create({
+        const newProposal = await Auction.create({
             auction_id,
             proposal_id,
             url,
@@ -100,7 +100,7 @@ router.post("/", async (ctx) => {
     if (operation === "acceptance") {
 
         // Buscar y eliminar offer previo
-        const offer = await auction.findOne({
+        const offer = await Auction.findOne({
             where: {
                 auction_id,
                 proposal_id,
@@ -113,7 +113,7 @@ router.post("/", async (ctx) => {
         }
 
         // Buscar proposal válido
-        const proposal = await auction.findOne({
+        const proposal = await Auction.findOne({
             where: {
                 auction_id,
                 proposal_id,
@@ -126,7 +126,7 @@ router.post("/", async (ctx) => {
             ctx.throw(400, "No existe un proposal válido (group_id == 4) para aceptar");
         }
 
-        const newAcceptance = await auction.create({
+        const newAcceptance = await Auction.create({
             auction_id,
             proposal_id,
             url,
@@ -150,7 +150,7 @@ router.post("/", async (ctx) => {
     if (operation === "rejection") {
 
         // Buscar proposal con group_id == 4
-        const proposal = await auction.findOne({
+        const proposal = await Auction.findOne({
             where: {
                 auction_id,
                 proposal_id,
@@ -198,7 +198,7 @@ router.post("/admin", requireAdmin, async (ctx) => {
     // OPERATION = "offer"
     // ------------------------------------------
     if (operation === "offer") {
-        const newOffer = await auction.create({
+        const newOffer = await Auction.create({
             auction_id,
             proposal_id,
             url,
@@ -220,7 +220,7 @@ router.post("/admin", requireAdmin, async (ctx) => {
     // OPERATION = "proposal"
     // ------------------------------------------
     if (operation === "proposal") {
-        const offer = await auction.findOne({
+        const offer = await Auction.findOne({
             where: {
                 auction_id,
                 operation: "offer",
@@ -235,7 +235,7 @@ router.post("/admin", requireAdmin, async (ctx) => {
             ctx.throw(400, "El offer previo no tiene group_id == 4");
         }
 
-        const newProposal = await auction.create({
+        const newProposal = await Auction.create({
             auction_id,
             proposal_id,
             url,
@@ -259,7 +259,7 @@ router.post("/admin", requireAdmin, async (ctx) => {
     if (operation === "acceptance") {
 
         // Buscar y eliminar offer previo
-        const offer = await auction.findOne({
+        const offer = await Auction.findOne({
             where: {
                 auction_id,
                 proposal_id,
@@ -272,7 +272,7 @@ router.post("/admin", requireAdmin, async (ctx) => {
         }
 
         // Buscar proposal válido
-        const proposal = await auction.findOne({
+        const proposal = await Auction.findOne({
             where: {
                 auction_id,
                 proposal_id,
@@ -285,7 +285,7 @@ router.post("/admin", requireAdmin, async (ctx) => {
             ctx.throw(400, "No existe un proposal válido (group_id == 4) para aceptar");
         }
 
-        const newAcceptance = await auction.create({
+        const newAcceptance = await Auction.create({
             auction_id,
             proposal_id,
             url,
@@ -309,7 +309,7 @@ router.post("/admin", requireAdmin, async (ctx) => {
     if (operation === "rejection") {
 
         // Buscar proposal con group_id == 4
-        const proposal = await auction.findOne({
+        const proposal = await Auction.findOne({
             where: {
                 auction_id,
                 proposal_id,
