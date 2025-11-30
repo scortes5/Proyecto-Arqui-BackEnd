@@ -31,36 +31,151 @@ router.post("/", requireAdmin, async (ctx) => {
         operation,
     } = ctx.request.body;
 
-    if (
-        !auction_id ||
-        !timestamp ||
-        !quantity ||
-        !group_id ||
-        !operation
-    ) {
+    if (!auction_id || !timestamp || !quantity || !group_id || !operation) {
         ctx.throw(400, "Request Body Incompleto");
     }
 
-    // Nueva validación
-    if (operation !== "offer") {
-        ctx.throw(400, "Solo se permiten operaciones de tipo 'offer'");
+    // ------------------------------------------
+    // OPERATION = "offer"
+    // ------------------------------------------
+    if (operation === "offer") {
+        const newOffer = await auction.create({
+            auction_id,
+            proposal_id,
+            url,
+            timestamp,
+            quantity,
+            group_id,
+            operation,
+        });
+
+        ctx.status = 201;
+        ctx.body = {
+            message: "Offer registrada correctamente",
+            auction_id: newOffer.auction_id,
+        };
+        return;
     }
 
-    await auction.create({
-        auction_id,
-        proposal_id,
-        url,
-        timestamp,
-        quantity,
-        group_id,
-        operation,
-    });
+    // ------------------------------------------
+    // OPERATION = "proposal"
+    // ------------------------------------------
+    if (operation === "proposal") {
+        const offer = await auction.findOne({
+            where: {
+                auction_id,
+                operation: "offer",
+            },
+        });
 
-    ctx.body = {
-        message: "Subasta Creada",
-        auction_id,
-    };
-    ctx.status = 201;
+        if (!offer) {
+            ctx.throw(400, "No existe un offer previo con ese auction_id");
+        }
+
+        if (offer.group_id !== 4) {
+            ctx.throw(400, "El offer previo no tiene group_id == 4");
+        }
+
+        const newProposal = await auction.create({
+            auction_id,
+            proposal_id,
+            url,
+            timestamp,
+            quantity,
+            group_id,
+            operation,
+        });
+
+        ctx.status = 201;
+        ctx.body = {
+            message: "Proposal registrada correctamente",
+            auction_id: newProposal.auction_id,
+        };
+        return;
+    }
+
+    // ------------------------------------------
+    // OPERATION = "acceptance"
+    // ------------------------------------------
+    if (operation === "acceptance") {
+
+        // Buscar y eliminar offer previo
+        const offer = await auction.findOne({
+            where: {
+                auction_id,
+                proposal_id,
+                operation: "offer",
+            },
+        });
+
+        if (offer) {
+            await offer.destroy();
+        }
+
+        // Buscar proposal válido
+        const proposal = await auction.findOne({
+            where: {
+                auction_id,
+                proposal_id,
+                operation: "proposal",
+                group_id: 4,
+            },
+        });
+
+        if (!proposal) {
+            ctx.throw(400, "No existe un proposal válido (group_id == 4) para aceptar");
+        }
+
+        const newAcceptance = await auction.create({
+            auction_id,
+            proposal_id,
+            url,
+            timestamp,
+            quantity,
+            group_id,
+            operation,
+        });
+
+        ctx.status = 201;
+        ctx.body = {
+            message: "Acceptance registrado correctamente",
+            auction_id: newAcceptance.auction_id,
+        };
+        return;
+    }
+
+    // ------------------------------------------
+    // OPERATION = "rejection"
+    // ------------------------------------------
+    if (operation === "rejection") {
+
+        // Buscar proposal con group_id == 4
+        const proposal = await auction.findOne({
+            where: {
+                auction_id,
+                proposal_id,
+                operation: "proposal",
+                group_id: 4,
+            },
+        });
+
+        // Si existe → eliminarlo
+        if (proposal) {
+            await proposal.destroy();
+        }
+
+        ctx.status = 200;
+        ctx.body = {
+            message: "Proposal rechazado y eliminado correctamente",
+            deleted: Boolean(proposal),
+        };
+        return;
+    }
+
+    // ------------------------------------------
+    // Operación no válida
+    // ------------------------------------------
+    ctx.throw(400, "Operación no permitida");
 });
 
 module.exports = router;
