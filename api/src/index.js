@@ -4,6 +4,7 @@ const properties = require("./routes/properties");
 const appointments = require("./routes/appointments");
 const suggestions = require("./routes/suggestions");
 const groupAppointments = require("./routes/groupAppointments");
+const auctions = require("./routes/auctions");
 const router = new Router();
 
 // rutas
