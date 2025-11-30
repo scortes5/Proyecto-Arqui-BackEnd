@@ -39,6 +39,8 @@ async function handleAuctionMessage(message) {
             return;
         }
 
+        console.log(`(OnAuctions) ${auction.operation} - ${auction.group_id}`);
+
         // Enviar mensaje al backend interno con retry
         await fibonacciRetry(async () => {
             const response = await fetch(
@@ -50,7 +52,7 @@ async function handleAuctionMessage(message) {
                 }
             );
 
-            if (response.status >= 500 && response.status < 600) {
+            if (!response.ok) {
                 throw new Error(
                     `Error API ${response.status}: ${await response.text()}`
                 );
