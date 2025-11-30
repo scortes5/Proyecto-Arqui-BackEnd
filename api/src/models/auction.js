@@ -16,8 +16,9 @@ module.exports = (sequelize, DataTypes) => {
                 primaryKey: true,
             },
             proposal_id: {
-                type: DataTypes.STRING,
+                type: DataTypes.UUID,
                 allowNull: true,
+                defaultValue: null,
             },
             url: {
                 type: DataTypes.STRING,
