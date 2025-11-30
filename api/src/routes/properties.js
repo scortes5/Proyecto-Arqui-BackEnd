@@ -2,6 +2,7 @@ const Router = require("@koa/router");
 const router = new Router();
 const { Op } = require("sequelize");
 const { Property } = require("../models");
+const requireAdmin = require("../middlewares/adminMiddleware");
 
 // -------------------------------------- METODO GET ---------------------------------------------
 // obtener todas las propiedades
