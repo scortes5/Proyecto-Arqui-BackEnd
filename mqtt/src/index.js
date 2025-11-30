@@ -4,6 +4,7 @@ const MQTT_CONFIG = require('./config/config');
 const { handlePropertyInfo } = require('./handlers/onInfo');
 const { handlePropertyRequest } = require('./handlers/onRequest');
 const { handlePropertyValidation } = require('./handlers/onValidation');
+const { handleAuctionMessage } = require('./handlers/onAuction');
 const { setMqttClient, publishPendingAppointments, publishConfirmedAppointments } = require('./services/publisher');
 
 
@@ -19,7 +20,7 @@ function connectToBroker() {
     console.log('🟢 Conectado al broker MQTT');
     console.log(`Broker: ${MQTT_CONFIG.brokerUrl}`);
     console.log(`Cliente ID: ${MQTT_CONFIG.options.clientId}`);
-    
+
     // Suscribirse a todos los canales necesarios (RF06)
     Object.entries(MQTT_CONFIG.channels).forEach(([name, channel]) => {
       client.subscribe(channel, (err) => {
@@ -39,7 +40,7 @@ function connectToBroker() {
         console.error("Error en el ciclo de 'ConfirmedAppointments':", err.message);
       }
       // Espera 5 segundos DESPUÉS de que termine la ejecución
-      setTimeout(confirmedLoop, 10000); 
+      setTimeout(confirmedLoop, 10000);
     })(); // El () al final la ejecuta por primera vez
 
     // Función "loop" auto-ejecutable para citas pendientes
@@ -52,7 +53,7 @@ function connectToBroker() {
       // Espera 5 segundos DESPUÉS de que termine la ejecución
       setTimeout(pendingLoop, 45000);
     })();
-    
+
   });
 
   client.on('message', async (topic, message) => {
@@ -67,6 +68,9 @@ function connectToBroker() {
           break;
         case MQTT_CONFIG.channels.PROPERTIES_VALIDATION:
           await handlePropertyValidation(message);
+          break;
+        case MQTT_CONFIG.channels.PROPERTIES_AUCTIONS:
+          await handleAuctionMessage(message);
           break;
         default:
           console.log(`Mensaje en canal no manejado: ${topic}`);
