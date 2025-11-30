@@ -133,65 +133,51 @@ router.post("/", async (ctx) => {
 // SOLO ADMIN
 router.post("/auctions", requireAdmin, async (ctx) => {
   try {
-    const auction = req.body;
+    const auction = ctx.request.body;   // CORRECTO EN KOA
 
     // Validar campo operation
     if (!auction.operation) {
-      return res.status(400).json({ error: "Missing operation field" });
+      ctx.status = 400;
+      ctx.body = { error: "Missing operation field" };
+      return;
     }
+
     console.log("Recibido:", auction.operation, auction);
 
     // Lógica según tipo de operación
-    if (auction.operation === "offer") {
+    switch (auction.operation) {
+      case "offer":
+        console.log("Procesando OFFER");
+        ctx.body = { status: "offer processed" };
+        return;
 
-      // ---- LÓGICA PARA OFFER ----
-      console.log("Procesando OFFER");
+      case "proposal":
+        console.log("Procesando PROPOSAL");
+        ctx.body = { status: "proposal processed" };
+        return;
 
-      return res.json({ status: "offer processed" });
+      case "acceptance":
+        console.log("Procesando ACCEPTANCE");
+        ctx.body = { status: "acceptance processed" };
+        return;
+
+      case "rejection":
+        console.log("Procesando REJECTION");
+        ctx.body = { status: "rejection processed" };
+        return;
+
+      default:
+        ctx.status = 400;
+        ctx.body = { error: "Invalid operation" };
+        return;
     }
-
-    if (auction.operation === "proposal") {
-
-      // ---- LÓGICA PARA PROPOSAL ----
-      console.log("Procesando PROPOSAL");
-
-      // Ej: guardar propuesta
-      // await db.Proposal.create(auction);
-
-      return res.json({ status: "proposal processed" });
-    }
-
-    if (auction.operation === "acceptance") {
-
-      // ---- LÓGICA PARA ACCEPTANCE ----
-      console.log("Procesando ACCEPTANCE");
-
-      // Ej: marcar propuesta como aceptada
-      // await db.Proposal.update(...);
-
-      return res.json({ status: "acceptance processed" });
-    }
-
-    if (auction.operation === "rejection") {
-
-      // ---- LÓGICA PARA REJECTION ----
-      console.log("Procesando REJECTION");
-
-      // Ej: marcar propuesta como rechazada
-      // await db.Proposal.update(...);
-
-      return res.json({ status: "rejection processed" });
-    }
-
-    // Si mandan un operation inválido
-    return res.status(400).json({ error: "Invalid operation" });
 
   } catch (err) {
     console.error("Error en /properties/auctions:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    ctx.status = 500;
+    ctx.body = { error: "Internal server error" };
   }
 });
-
 
 
 module.exports = router;
