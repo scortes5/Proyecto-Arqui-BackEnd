@@ -55,7 +55,7 @@ async function validateGroupBuy(wsToken) {
       propertyId = metadata.p;
     }
   } catch (e) {
-    console.log("Error parsing session ID:", error.message);
+    console.log("Error parsing session ID:", e.message);
   }
 
   if (!propertyId) {
