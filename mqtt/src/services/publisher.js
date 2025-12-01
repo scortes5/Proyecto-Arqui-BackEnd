@@ -207,12 +207,6 @@ async function publishAuction(auctionData) {
   if (missingFields.length > 0)
     throw new Error(`Faltan campos de AUCTION: ${missingFields.join(', ')}`);
 
-  console.log(`(publisher auctions) 📤 Intentando publicar auction:`, {
-    auction_id: auctionData.auction_id,
-    operation: auctionData.operation,
-    group_id: auctionData.group_id,
-    url: auctionData.url
-  });
 
   return await fibonacciRetry(async () => {
     return new Promise((resolve, reject) => {
@@ -263,7 +257,6 @@ async function publishPendingAuctions() {
     }
 
     const fullUrl = `${apiUrl}/auctions`;
-    console.log(`🔍 (publishPendingAuctions) Consultando auctions desde: ${fullUrl}`);
 
     const response = await fetch(fullUrl).catch(err => {
       console.error('❌ Error de red al intentar conectar con la API:', err.message);
@@ -277,24 +270,16 @@ async function publishPendingAuctions() {
     }
 
     const allAuctions = await response.json();
-    console.log(`📊 (publishPendingAuctions) Total auctions en DB: ${allAuctions.length}`);
+
+  
 
     const auctionsToPublish = allAuctions.filter(auction =>
-      auction.group_id === 4 && auction.published === false
+      (auction.group_id === 4 && auction.published == false)
     );
 
-    console.log(`📋 (publishPendingAuctions) Auctions pendientes (group_id=4, published=false): ${auctionsToPublish.length}`);
-
-    if (auctionsToPublish.length > 0) {
-      console.log(`🚀 Iniciando publicación de ${auctionsToPublish.length} auctions...`);
-      auctionsToPublish.forEach((a, idx) => {
-        console.log(`  ${idx + 1}. auction_id: ${a.auction_id}, operation: ${a.operation}, url: ${a.url}`);
-      });
-    }
 
     for (const auction of auctionsToPublish) {
       try {
-        console.log(`\n📤 Procesando auction ${auction.auction_id}...`);
 
         await publishAuction({
           auction_id: auction.auction_id,
@@ -306,18 +291,13 @@ async function publishPendingAuctions() {
           operation: auction.operation,
         });
 
-        console.log(`✅ Marcando auction ${auction.auction_id} como publicada en DB...`);
         await markAuctionAsPublishedInDB(auction.auction_id);
-        console.log(`✅ Auction ${auction.auction_id} completamente procesada`);
 
       } catch (err) {
         console.error(`❌ Error procesando auction ${auction.auction_id}:`, err.message);
       }
     }
 
-    if (auctionsToPublish.length > 0) {
-      console.log(`\n✅ Ciclo de publicación de auctions completado\n`);
-    }
 
   } catch (err) {
     console.error('❌ Error en el ciclo de publicación de auctions:', err.message);

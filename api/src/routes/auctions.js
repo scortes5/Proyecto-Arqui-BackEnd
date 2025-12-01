@@ -17,6 +17,7 @@ router.get("/", async (ctx) => {
         quantity: a.quantity,
         group_id: a.group_id,
         operation: a.operation,
+        published: a.published,
     }));
     ctx.status = 200;
 });
