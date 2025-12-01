@@ -1,5 +1,11 @@
 name: Backend CI
 
+# NECESARIO PARA semantic-release (sin esto NO puede pushear ni crear tags)
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 on:
   push:
     branches:
@@ -82,7 +88,7 @@ jobs:
       - name: MQTT Lint
         working-directory: mqtt
         run: npm run lint
-  
+
   release:
     name: Release Version
     runs-on: ubuntu-latest
@@ -92,17 +98,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # NECESARIO para tags y commits anteriores
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install semantic-release
+      # semantic-release requiere instalar dependencias EN EL ROOT
+      - name: Install dependencies for semantic-release
         run: npm ci
 
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
 
