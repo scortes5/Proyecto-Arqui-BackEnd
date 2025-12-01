@@ -18,14 +18,14 @@ module.exports = (sequelize, DataTypes) => {
             proposal_id: {
                 type: DataTypes.UUID,
                 allowNull: true,
-                defaultValue: null,
+                defaultValue: "",
             },
             url: {
                 type: DataTypes.STRING,
                 allowNull: true,
             },
             timestamp: {
-                type: DataTypes.DATE,
+                type: DataTypes.STRING,
                 allowNull: false,
             },
             quantity: {
@@ -33,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
             },
             group_id: {
-                type: DataTypes.STRING,
+                type: DataTypes.INTEGER,
                 allowNull: false,
             },
             operation: {
