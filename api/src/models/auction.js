@@ -40,6 +40,11 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.ENUM("offer", "proposal", "acceptance", "rejection"),
                 allowNull: false,
             },
+            published: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+            },
         },
         {
             sequelize,

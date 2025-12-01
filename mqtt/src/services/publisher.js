@@ -29,7 +29,7 @@ function getClientStatus() {
 
 async function getPendingAppointments() {
   const response = await fetch(`${process.env.API_URL}/appointments/all`);
-  
+
   if (!response.ok) {
     throw new Error(`Error consultando appointments: ${response.status}`);
   }
@@ -121,7 +121,7 @@ async function getConfirmedAppointments() {
 
 async function markValidationAsPublishedInDB(request_id) {
   const url = `${process.env.API_URL}/appointments/${request_id}`;
-  
+
   const response = await fetch(url, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -130,7 +130,7 @@ async function markValidationAsPublishedInDB(request_id) {
 
   if (!response.ok)
     throw new Error(`API falló al marcar ${request_id} como publicado (${response.status})`);
-  
+
   return await response.json();
 }
 
@@ -192,6 +192,34 @@ async function publishConfirmedAppointments() {
   } catch (err) {
     console.error('Error en el ciclo de publicación de pendientes:', err.message);
   }
+}
+
+async function publishAuction(requestData) {
+  if (!isClientReady()) throw new Error('Cliente MQTT no inicializado');
+
+  // const requiredFields = ['request_id', 'group_id', 'url', 'timestamp'];
+  // const missingFields = requiredFields.filter(field => !requestData[field]);
+  // if (missingFields.length > 0)
+  //   throw new Error(`Faltan campos de REQUEST: ${missingFields.join(', ')}`);
+
+  // return await fibonacciRetry(async () => {
+  //   return new Promise((resolve, reject) => {
+  //     if (!mqttClient.connected) return reject(new Error('Cliente MQTT no conectado'));
+
+  //     const message = JSON.stringify(requestData);
+  //     const channel = 'properties/requests';
+
+  //     mqttClient.publish(channel, message, { qos: 1 }, (err) => {
+  //       if (err) {
+  //         console.error('(publisher requests) ❌ Error:', err.message);
+  //         reject(err);
+  //       } else {
+  //         // console.log(`(publisher requests) Publicado: ${requestData.request_id}`);
+  //         resolve();
+  //       }
+  //     });
+  //   });
+  // }, 5);
 }
 
 // ====================================================
