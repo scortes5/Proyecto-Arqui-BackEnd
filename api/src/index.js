@@ -9,6 +9,7 @@ const router = new Router();
 
 // rutas
 router.use("/prueba", prueba.routes());
+router.use("/auctions", auctions.routes());
 router.use("/properties", properties.routes());
 router.use("/appointments", appointments.routes());
 router.use("/suggestions", suggestions.routes());

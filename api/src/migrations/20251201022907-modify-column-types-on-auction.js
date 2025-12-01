@@ -10,6 +10,7 @@ module.exports = {
     await queryInterface.changeColumn("Auctions", "group_id", {
       type: Sequelize.INTEGER,
       allowNull: false,
+      using: 'group_id::integer',
     });
   },
 
