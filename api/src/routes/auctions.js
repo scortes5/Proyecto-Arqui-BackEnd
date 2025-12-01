@@ -41,7 +41,7 @@ router.post("/", async (ctx) => {
     if (operation === "offer") {
         const newOffer = await Auction.create({
             auction_id,
-            proposal_id,
+            proposal_id: proposal_id || null,
             url,
             timestamp,
             quantity,
