@@ -82,3 +82,27 @@ jobs:
       - name: MQTT Lint
         working-directory: mqtt
         run: npm run lint
+  
+  release:
+    name: Release Version
+    runs-on: ubuntu-latest
+    needs: [mqtt-ci]
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install semantic-release
+        run: npm ci
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
