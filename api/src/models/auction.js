@@ -10,10 +10,14 @@ module.exports = (sequelize, DataTypes) => {
 
     Auction.init(
         {
+            id: {
+                type: DataTypes.INTEGER,
+                primaryKey: true,
+                autoIncrement: true,
+            },
             auction_id: {
                 type: DataTypes.UUID,
                 defaultValue: DataTypes.UUIDV4,
-                primaryKey: true,
             },
             proposal_id: {
                 type: DataTypes.UUID,
