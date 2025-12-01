@@ -9,7 +9,8 @@ const { tx } = require("../utils/trx");
 const transporter = require("../utils/transporter");
 const appointmentService = require("../services/appointmentService");
 
-// POST /appointments/buy (borrado)
+// 🔥 IMPORTAR FUNCIONES WEBSOCKET
+const { emitToUser, emitToPublic, getIO } = require("../websocket");
 
 // POST /appointments/validate
 router.post("/validate", async (ctx) => {
@@ -30,13 +31,29 @@ router.post("/validate", async (ctx) => {
     ctx.throw(404, "Visita no encontrada");
   }
 
-  // const property = await Property.findOne({ where: { url: appointment.property_url } });
-
   // Actualizar estado
   appointment.status = status;
   appointment.deposit_token = deposit_token;
   appointment.reason = reason || "-";
   await appointment.save();
+
+  // 🔥 EMITIR WEBSOCKET - Validación recibida
+  if (appointment.user_id) {
+    emitToUser(appointment.user_id, 'appointment-validated', {
+      request_id,
+      status,
+      reason: reason || "-",
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // También emitir a sala pública para actualizar disponibilidad
+  emitToPublic('external-validation', {
+    request_id,
+    status,
+    property_url: appointment.property_url,
+    timestamp: new Date().toISOString()
+  });
 
   ctx.body = {
     message: "Visita Actualizada",
@@ -65,6 +82,14 @@ router.post("/requests", async (ctx) => {
       property_url: url,
       status: "PENDING",
       reason: "APPOINTMENT",
+    });
+
+    // 🔥 EMITIR WEBSOCKET - Nueva reserva de otro grupo
+    emitToPublic('external-purchase-request', {
+      request_id,
+      group_id,
+      property_url: url,
+      timestamp: new Date().toISOString()
     });
   }
 
@@ -185,8 +210,7 @@ router.delete("/:request_id", async (ctx) => {
 });
 
 ///////////////Rutas webpay//////////////////////
-// POST /appointments/buywebpay
-
+// POST /appointments/buy
 router.post("/buy", async (ctx) => {
   console.log("=== /buy called ===");
   console.log("Headers:", ctx.request.headers);
@@ -236,6 +260,14 @@ router.post("/buy", async (ctx) => {
       trx.token
     );
 
+    // 🔥 EMITIR WEBSOCKET - Compra iniciada
+    emitToUser(userId, 'purchase-initiated', {
+      request_id: newAppointment.request_id,
+      property_url,
+      status: 'PENDING',
+      timestamp: new Date().toISOString()
+    });
+
     // Response
     ctx.status = 201;
     ctx.body = {
@@ -275,6 +307,16 @@ router.post("/validatebuy", async (ctx) => {
     );
 
     if (!isApproved) {
+      // 🔥 EMITIR WEBSOCKET - Pago rechazado
+      if (appointment.user_id) {
+        emitToUser(appointment.user_id, 'payment-rejected', {
+          request_id: appointment.request_id,
+          property_url: appointment.property_url,
+          reason: appointment.reason,
+          timestamp: new Date().toISOString()
+        });
+      }
+
       ctx.body = {
         message: "Transacción rechazada",
         request_id: appointment.request_id,
@@ -309,6 +351,28 @@ router.post("/validatebuy", async (ctx) => {
     // Actualizar reservaciones de la propiedad
     await appointmentService.decrementPropertyReservations(property);
 
+    // 🔥 EMITIR WEBSOCKET - Pago aceptado
+    if (appointment.user_id) {
+      emitToUser(appointment.user_id, 'payment-accepted', {
+        request_id: appointment.request_id,
+        property_url: appointment.property_url,
+        property_name: property?.name,
+        amount: confirmedTx.amount,
+        pdf_url: pdfUrl,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 🔥 EMITIR A SALA PÚBLICA - Disponibilidad actualizada
+    if (property) {
+      emitToPublic('property-availability-changed', {
+        property_id: property.id,
+        property_url: property.url,
+        new_reservations: property.reservations,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     ctx.status = 200;
     ctx.body = {
       message: "Transacción aceptada y cita confirmada",
@@ -325,7 +389,7 @@ router.post("/validatebuy", async (ctx) => {
   }
 });
 
-
+// POST /appointments/group/buy
 router.post("/group/buy", async (ctx) => {
   console.log("=== /buy called (Group Logic) ===");
   
@@ -389,6 +453,23 @@ router.post("/group/buy", async (ctx) => {
       newAppointment.request_id,
       trx.token
     );
+
+    // 🔥 EMITIR WEBSOCKET - Compra de grupo iniciada
+    emitToUser(userId, 'group-purchase-initiated', {
+      request_id: newAppointment.request_id,
+      property_url,
+      price_paid: cost,
+      status: 'PENDING',
+      timestamp: new Date().toISOString()
+    });
+
+    // 🔥 EMITIR A SALA PÚBLICA - Stock de grupo actualizado
+    emitToPublic('group-stock-changed', {
+      property_id,
+      property_url,
+      new_quantity: groupStock.quantity - 1,
+      timestamp: new Date().toISOString()
+    });
 
     ctx.status = 201;
     ctx.body = {
