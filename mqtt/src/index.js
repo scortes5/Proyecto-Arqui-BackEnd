@@ -55,14 +55,14 @@ function connectToBroker() {
     })();
 
     // Función "loop" auto-ejecutable para auctions pendientes
-    (async function pendingLoop() {
+    (async function pendingAuctionsLoop() {
       try {
         await publishPendingAuctions();
       } catch (err) {
         console.error("Error en el ciclo de 'PendingAuctions':", err.message);
       }
       // Espera 5 segundos DESPUÉS de que termine la ejecución
-      setTimeout(pendingLoop, 45000);
+      setTimeout(pendingAuctionsLoop, 45000);
     })();
 
   });
