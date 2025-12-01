@@ -62,7 +62,7 @@ function connectToBroker() {
         console.error("Error en el ciclo de 'PendingAuctions':", err.message);
       }
       // Espera 5 segundos DESPUÉS de que termine la ejecución
-      setTimeout(pendingAuctionsLoop, 45000);
+      setTimeout(pendingAuctionsLoop, 5000);
     })();
 
   });

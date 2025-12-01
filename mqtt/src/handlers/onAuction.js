@@ -4,10 +4,6 @@ async function handleAuctionMessage(message) {
     const startTime = Date.now();
     const raw = message.toString();
 
-    console.log("──────────────────────────────────────────────");
-    console.log("🟦 [AuctionConsumer] Mensaje recibido del broker:");
-    console.log(raw);
-    console.log("──────────────────────────────────────────────");
 
     try {
         // Parseo seguro
@@ -57,13 +53,9 @@ async function handleAuctionMessage(message) {
             return;
         }
 
-        console.log(
-            `🟦 Procesando operación '${auction.operation}' para group_id=${auction.group_id}`
-        );
 
         // Ejecutar POST con reintentos
         await fibonacciRetry(async (attempt) => {
-            console.log(`🔄 Intento #${attempt} → enviando a API interna...`);
 
             const response = await fetch(`${process.env.API_URL}/auctions`, {
                 method: "POST",
@@ -71,7 +63,6 @@ async function handleAuctionMessage(message) {
                 body: JSON.stringify(auction),
             });
 
-            console.log(`🟨 API respondió con status: ${response.status}`);
 
             if (!response.ok) {
                 const txt = await response.text();
@@ -81,21 +72,15 @@ async function handleAuctionMessage(message) {
             }
 
             const result = await response.json();
-            console.log("🟩 Respuesta exitosa API:", result);
 
             return result;
         });
 
-        console.log(
-            `🟩 Mensaje procesado correctamente: operation=${auction.operation}, auction_id=${auction.auction_id}`
-        );
     } catch (err) {
         console.error("🟥 Error general al procesar mensaje broker:");
         console.error(err.stack || err.message);
     } finally {
         const total = Date.now() - startTime;
-        console.log(`⏱️  Tiempo total procesamiento: ${total}ms`);
-        console.log("──────────────────────────────────────────────\n");
     }
 }
 
