@@ -49,7 +49,7 @@ async function handlePropertyValidation(message) {
       }
 
       const result = await response.json();
-      console.log(`Validación procesada: ${validation.request_id} - ${validation.status}`);
+      // console.log(`Validación procesada: ${validation.request_id} - ${validation.status}`);
       return result;
     });
 

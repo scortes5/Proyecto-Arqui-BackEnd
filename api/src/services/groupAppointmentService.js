@@ -1,5 +1,4 @@
 const { v4: uuidv4 } = require("uuid");
-const { Op } = require("sequelize");
 const { Property, GroupAppointment } = require("../models");
 const appointmentService = require("./appointmentService");
 
@@ -56,6 +55,7 @@ async function validateGroupBuy(wsToken) {
       propertyId = metadata.p;
     }
   } catch (e) {
+    console.log("Error parsing session ID:", e.message);
   }
 
   if (!propertyId) {

@@ -3,7 +3,7 @@ const router = new Router();
 const { Op } = require("sequelize");
 const { Property } = require("../models");
 const requireAdmin = require("../middlewares/adminMiddleware");
-const db = require("../models");
+//const db = require("../models");
 
 // -------------------------------------- METODO GET ---------------------------------------------
 // obtener todas las propiedades

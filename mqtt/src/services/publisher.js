@@ -29,7 +29,7 @@ function getClientStatus() {
 
 async function getPendingAppointments() {
   const response = await fetch(`${process.env.API_URL}/appointments/all`);
-  
+
   if (!response.ok) {
     throw new Error(`Error consultando appointments: ${response.status}`);
   }
@@ -121,7 +121,7 @@ async function getConfirmedAppointments() {
 
 async function markValidationAsPublishedInDB(request_id) {
   const url = `${process.env.API_URL}/appointments/${request_id}`;
-  
+
   const response = await fetch(url, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -130,7 +130,7 @@ async function markValidationAsPublishedInDB(request_id) {
 
   if (!response.ok)
     throw new Error(`API falló al marcar ${request_id} como publicado (${response.status})`);
-  
+
   return await response.json();
 }
 
@@ -195,6 +195,117 @@ async function publishConfirmedAppointments() {
 }
 
 // ====================================================
+// ✅ MANEJO DE AUCTIONS
+// ====================================================
+
+async function publishAuction(auctionData) {
+  if (!isClientReady()) throw new Error('Cliente MQTT no inicializado');
+
+  // proposal_id es opcional (puede ser null en offers)
+  const requiredFields = ['auction_id', 'quantity', 'group_id', 'url', 'timestamp', 'operation'];
+  const missingFields = requiredFields.filter(field => !auctionData[field]);
+  if (missingFields.length > 0)
+    throw new Error(`Faltan campos de AUCTION: ${missingFields.join(', ')}`);
+
+
+  return await fibonacciRetry(async () => {
+    return new Promise((resolve, reject) => {
+      if (!mqttClient.connected) return reject(new Error('Cliente MQTT no conectado'));
+
+      const message = JSON.stringify(auctionData);
+      const channel = 'properties/auctions';
+
+      mqttClient.publish(channel, message, { qos: 1 }, (err) => {
+        if (err) {
+          console.error('(publisher auctions) ❌ Error publicando:', err.message);
+          reject(err);
+        } else {
+          console.log(`(publisher auctions) ✅ Publicado exitosamente: ${auctionData.auction_id}`);
+          resolve();
+        }
+      });
+    });
+  }, 5);
+}
+
+async function markAuctionAsPublishedInDB(auction_id) {
+  const url = `${process.env.API_URL}/auctions/${auction_id}`;
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ auction_published: true })
+  });
+
+  if (!response.ok)
+    throw new Error(`API falló al marcar ${auction_id} como publicado (${response.status})`);
+
+  return await response.json();
+}
+
+async function publishPendingAuctions() {
+  if (!isClientReady()) {
+    console.warn('⚠️ MQTT client no listo. No se pueden publicar auctions.');
+    return;
+  }
+
+  try {
+    const apiUrl = process.env.API_URL;
+    if (!apiUrl) {
+      console.error('❌ API_URL no está configurada en las variables de entorno');
+      return;
+    }
+
+    const fullUrl = `${apiUrl}/auctions`;
+
+    const response = await fetch(fullUrl).catch(err => {
+      console.error('❌ Error de red al intentar conectar con la API:', err.message);
+      throw new Error(`Fetch failed: ${err.message}`);
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ API respondió con error ${response.status}:`, errorText);
+      throw new Error(`Error consultando auctions: ${response.status}`);
+    }
+
+    const allAuctions = await response.json();
+
+  
+
+    const auctionsToPublish = allAuctions.filter(auction =>
+      (auction.group_id === 4 && auction.published == false)
+    );
+
+
+    for (const auction of auctionsToPublish) {
+      try {
+
+        await publishAuction({
+          auction_id: auction.auction_id,
+          proposal_id: auction.proposal_id || null,
+          url: auction.url,
+          timestamp: auction.updated_at || new Date().toISOString(),
+          quantity: auction.quantity,
+          group_id: auction.group_id,
+          operation: auction.operation,
+        });
+
+        await markAuctionAsPublishedInDB(auction.auction_id);
+
+      } catch (err) {
+        console.error(`❌ Error procesando auction ${auction.auction_id}:`, err.message);
+      }
+    }
+
+
+  } catch (err) {
+    console.error('❌ Error en el ciclo de publicación de auctions:', err.message);
+    console.error('Stack trace:', err.stack);
+  }
+}
+
+// ====================================================
 // 🧾 EXPORTS
 // ====================================================
 
@@ -209,5 +320,7 @@ module.exports = {
   // Utilidades
   setMqttClient,
   isClientReady,
-  getClientStatus
+  getClientStatus,
+  publishPendingAuctions
+
 };

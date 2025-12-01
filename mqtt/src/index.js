@@ -5,7 +5,7 @@ const { handlePropertyInfo } = require('./handlers/onInfo');
 const { handlePropertyRequest } = require('./handlers/onRequest');
 const { handlePropertyValidation } = require('./handlers/onValidation');
 const { handleAuctionMessage } = require('./handlers/onAuction');
-const { setMqttClient, publishPendingAppointments, publishConfirmedAppointments } = require('./services/publisher');
+const { setMqttClient, publishPendingAppointments, publishConfirmedAppointments, publishPendingAuctions } = require('./services/publisher');
 
 
 let client;
@@ -52,6 +52,17 @@ function connectToBroker() {
       }
       // Espera 5 segundos DESPUÉS de que termine la ejecución
       setTimeout(pendingLoop, 45000);
+    })();
+
+    // Función "loop" auto-ejecutable para auctions pendientes
+    (async function pendingAuctionsLoop() {
+      try {
+        await publishPendingAuctions();
+      } catch (err) {
+        console.error("Error en el ciclo de 'PendingAuctions':", err.message);
+      }
+      // Espera 5 segundos DESPUÉS de que termine la ejecución
+      setTimeout(pendingAuctionsLoop, 5000);
     })();
 
   });

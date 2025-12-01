@@ -60,7 +60,7 @@ router.post("/validatebuy", requireAdmin, async (ctx) => {
 });
 
 router.post("/:propertyId/discount", requireAdmin, async (ctx) => {
-  groupAppointment = await GroupAppointment.findOne({
+  let groupAppointment = await GroupAppointment.findOne({
     where: {
       property_id: ctx.params.propertyId,
     },

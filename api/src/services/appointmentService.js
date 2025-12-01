@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Appointment, Property } = require("../models");
+const { Appointment } = require("../models");
 const { v4: uuidv4 } = require("uuid");
 const { tx } = require("../utils/trx");
 const transporter = require("../utils/transporter");

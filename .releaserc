@@ -1,0 +1,15 @@
+{
+  "branches": ["master"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["api/package.json", "mqtt/package.json"],
+        "message": "chore(release): ${nextRelease.version}"
+      }
+    ],
+    "@semantic-release/github"
+  ]
+}

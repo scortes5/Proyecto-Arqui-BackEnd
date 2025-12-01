@@ -10,22 +10,26 @@ module.exports = (sequelize, DataTypes) => {
 
     Auction.init(
         {
+            id: {
+                type: DataTypes.INTEGER,
+                primaryKey: true,
+                autoIncrement: true,
+            },
             auction_id: {
                 type: DataTypes.UUID,
                 defaultValue: DataTypes.UUIDV4,
-                primaryKey: true,
             },
             proposal_id: {
                 type: DataTypes.UUID,
                 allowNull: true,
-                defaultValue: null,
+                defaultValue: "",
             },
             url: {
                 type: DataTypes.STRING,
                 allowNull: true,
             },
             timestamp: {
-                type: DataTypes.DATE,
+                type: DataTypes.STRING,
                 allowNull: false,
             },
             quantity: {
@@ -33,12 +37,17 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
             },
             group_id: {
-                type: DataTypes.STRING,
+                type: DataTypes.INTEGER,
                 allowNull: false,
             },
             operation: {
                 type: DataTypes.ENUM("offer", "proposal", "acceptance", "rejection"),
                 allowNull: false,
+            },
+            published: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
             },
         },
         {
