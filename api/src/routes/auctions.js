@@ -86,7 +86,9 @@ router.post("/", async (ctx) => {
         }
 
         if (offer.group_id !== 4) {
-            ctx.throw(400, "El offer previo no tiene group_id == 4");
+            ctx.status = 200;
+            ctx.body = { message: "Proposal no está dirigido a oferta propia (ignorada)", auction_id };
+            return;
         }
 
         const [newProposal, created] = await Auction.findOrCreate({
