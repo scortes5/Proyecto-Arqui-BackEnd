@@ -376,5 +376,35 @@ router.patch("/:auction_id", async (ctx) => {
     };
 });
 
+// DELETE /auctions/admin/:auction_id - Eliminar ofertas propias (group_id == 4)
+router.delete("/admin/:auction_id", requireAdmin, async (ctx) => {
+    const { auction_id } = ctx.params;
+
+    if (!auction_id) {
+        ctx.throw(400, "Falta auction_id");
+    }
+
+    const auction = await Auction.findOne({
+        where: {
+            auction_id,
+            group_id: 4,
+            operation: "offer"
+        }
+    });
+
+    if (!auction) {
+        ctx.throw(404, "Oferta no encontrada o no pertenece al grupo 4");
+    }
+
+    await auction.destroy();
+
+    ctx.status = 200;
+    ctx.body = {
+        message: "Oferta eliminada correctamente",
+        auction_id: auction.auction_id,
+    };
+});
+
 
 module.exports = router;
+

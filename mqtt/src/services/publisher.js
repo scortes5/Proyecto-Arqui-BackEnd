@@ -256,10 +256,23 @@ async function publishPendingAuctions() {
   }
 
   try {
-    console.log('🔍 (publishPendingAuctions) Consultando auctions desde API...');
-    const response = await fetch(`${process.env.API_URL}/auctions`);
+    const apiUrl = process.env.API_URL;
+    if (!apiUrl) {
+      console.error('❌ API_URL no está configurada en las variables de entorno');
+      return;
+    }
+
+    const fullUrl = `${apiUrl}/auctions`;
+    console.log(`🔍 (publishPendingAuctions) Consultando auctions desde: ${fullUrl}`);
+
+    const response = await fetch(fullUrl).catch(err => {
+      console.error('❌ Error de red al intentar conectar con la API:', err.message);
+      throw new Error(`Fetch failed: ${err.message}`);
+    });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ API respondió con error ${response.status}:`, errorText);
       throw new Error(`Error consultando auctions: ${response.status}`);
     }
 
@@ -308,6 +321,7 @@ async function publishPendingAuctions() {
 
   } catch (err) {
     console.error('❌ Error en el ciclo de publicación de auctions:', err.message);
+    console.error('Stack trace:', err.stack);
   }
 }
 
