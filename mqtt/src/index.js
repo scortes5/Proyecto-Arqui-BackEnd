@@ -5,7 +5,7 @@ const { handlePropertyInfo } = require('./handlers/onInfo');
 const { handlePropertyRequest } = require('./handlers/onRequest');
 const { handlePropertyValidation } = require('./handlers/onValidation');
 const { handleAuctionMessage } = require('./handlers/onAuction');
-const { setMqttClient, publishPendingAppointments, publishConfirmedAppointments } = require('./services/publisher');
+const { setMqttClient, publishPendingAppointments, publishConfirmedAppointments, publishPendingAuctions } = require('./services/publisher');
 
 
 let client;
