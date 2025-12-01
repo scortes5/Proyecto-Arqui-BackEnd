@@ -198,6 +198,21 @@ router.post("/admin", requireAdmin, async (ctx) => {
     // OPERATION = "offer"
     // ------------------------------------------
     if (operation === "offer") {
+        // Validar que no exista otra oferta con el mismo URL y group_id == 4
+        if (group_id === 4) {
+            const existingOffer = await Auction.findOne({
+                where: {
+                    url,
+                    group_id: 4,
+                    operation: "offer",
+                },
+            });
+
+            if (existingOffer) {
+                ctx.throw(400, `Ya existe una oferta con el mismo URL y group_id == 4 (auction_id: ${existingOffer.auction_id})`);
+            }
+        }
+
         const newOffer = await Auction.create({
             auction_id,
             proposal_id: proposal_id || null,

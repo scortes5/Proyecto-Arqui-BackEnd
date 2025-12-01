@@ -14,7 +14,15 @@ async function handleAuctionMessage(message) {
         let auction;
         try {
             auction = JSON.parse(raw);
-            console.log("🟩 JSON parseado correctamente:", auction);
+            console.log("🟩 JSON parseado correctamente");
+            console.log("📋 Campos recibidos:");
+            console.log(`   - auction_id: ${auction.auction_id}`);
+            console.log(`   - proposal_id: ${auction.proposal_id}`);
+            console.log(`   - url: ${auction.url}`);
+            console.log(`   - timestamp: ${auction.timestamp}`);
+            console.log(`   - quantity: ${auction.quantity}`);
+            console.log(`   - group_id: ${auction.group_id}`);
+            console.log(`   - operation: ${auction.operation}`);
         } catch (parseError) {
             console.error("🟥 Error parseando JSON:", parseError.message);
             console.error("Contenido recibido:", raw);
