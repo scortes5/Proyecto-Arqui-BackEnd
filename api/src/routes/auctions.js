@@ -1,6 +1,6 @@
 const Router = require("@koa/router");
 const requireAdmin = require("../middlewares/adminMiddleware");
-const { Auction } = require("../models");
+const { Auction, GroupAppointment, Property } = require("../models");
 const router = new Router();
 
 // GET /auctions - Listar todas las subastas
@@ -268,30 +268,61 @@ router.post("/admin", requireAdmin, async (ctx) => {
             ctx.throw(400, "No existe un offer previo con ese auction_id");
         }
 
-        if (offer.group_id !== 4) {
-            ctx.throw(400, "El offer previo no tiene group_id == 4");
-        }
+        // Validación adicional para proposals propios (group_id == 4)
+        if (group_id === 4) {
 
-        const [newProposal, created] = await Auction.findOrCreate({
-            where: { auction_id },
-            defaults: {
-                proposal_id: proposal_id || null,
-                url,
-                timestamp,
-                quantity,
-                group_id,
-                operation,
+            const property = await Property.findOne({
+                where: { url },
+            });
+
+            if (!property) {
+                ctx.throw(404, `No existe una propiedad con el URL ${url}`);
             }
-        });
 
-        if (!created) {
-            ctx.throw(409, "Ya existe un proposal con ese auction_id");
+            const property_id = property.id;
+
+            const groupAppointment = await GroupAppointment.findOne({
+                where: { property_id },
+            });
+
+            if (!groupAppointment) {
+                ctx.throw(404, `No se encontró GroupAppointment para property_id ${property_id}`);
+            }
+
+            // Buscar oferta existente para la misma propiedad (group_id == 4, operation == offer)
+            const existingOffer = await Auction.findOne({
+                where: {
+                    url,
+                    group_id: 4,
+                    operation: "offer"
+                }
+            });
+
+            const offerQuantity = existingOffer ? existingOffer.quantity : 0;
+            const totalQuantity = quantity + offerQuantity;
+
+            if (totalQuantity > groupAppointment.quantity) {
+                ctx.throw(400,
+                    `La cantidad total (proposal: ${quantity} + offer existente: ${offerQuantity} = ${totalQuantity}) ` +
+                    `supera la cantidad disponible de la propiedad (${groupAppointment.quantity})`
+                );
+            }
         }
+
+        const newProposal = await Auction.create({
+            auction_id,
+            proposal_id,
+            url,
+            timestamp,
+            quantity,
+            group_id,
+            operation,
+        });
 
         ctx.status = 201;
         ctx.body = {
             message: "Proposal registrada correctamente (admin)",
-            auction_id: newProposal.auction_id,
+            auction_id: newProposal.proposal_id,
         };
         return;
     }
@@ -300,7 +331,7 @@ router.post("/admin", requireAdmin, async (ctx) => {
     // ADMIN: OPERATION = "acceptance"
     // ------------------------------------------
     if (operation === "acceptance") {
-        
+
         // 1. Crear aceptación (o fallar si ya existe)
         const [newAcceptance, created] = await Auction.findOrCreate({
             where: { auction_id },
