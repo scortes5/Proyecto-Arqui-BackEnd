@@ -337,4 +337,29 @@ router.post("/admin", requireAdmin, async (ctx) => {
     ctx.throw(400, "Operación no permitida");
 });
 
+// PATCH /auctions/:auction_id
+router.patch("/:auction_id", async (ctx) => {
+    const { auction_id } = ctx.params;
+
+    if (!auction_id) {
+        ctx.throw(400, "Falta auction_id");
+    }
+
+    const auction = await Auction.findOne({ where: { auction_id } });
+
+    if (!auction) {
+        ctx.throw(404, "Auction not Found");
+    }
+
+    auction.published = true;
+    await auction.save();
+
+    ctx.status = 200;
+    ctx.body = {
+        message: "Auction publicada correctamente",
+        auction_id: auction.auction_id,
+    };
+});
+
+
 module.exports = router;
