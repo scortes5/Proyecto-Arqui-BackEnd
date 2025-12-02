@@ -1,0 +1,745 @@
+{
+  "info": {
+    "name": "Real Estate Platform API",
+    "description": "API completa para gestión de propiedades, citas, subastas y agendamientos grupales",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "Validate Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/validate",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "validate"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"deposit_token\": \"abc123token\",\n  \"status\": \"ACCEPTED\",\n  \"reason\": \"Validación exitosa\",\n  \"timestamp\": \"2025-12-01T10:30:00Z\"\n}"
+            },
+            "description": "Valida una cita y actualiza su estado. Emite eventos WebSocket a los usuarios afectados."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"message\": \"Visita Actualizada\",\n  \"request_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"new_status\": \"ACCEPTED\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/requests",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "requests"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"deposit_token\": \"abc123token\",\n  \"group_id\": \"04\",\n  \"url\": \"https://example.com/property/123\",\n  \"timestamp\": \"2025-12-01T10:30:00Z\"\n}"
+            },
+            "description": "Crea una nueva solicitud de cita desde un grupo externo."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"message\": \"Reserva Creada\",\n  \"request_id\": \"550e8400-e29b-41d4-a716-446655440000\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User Appointments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments",
+              "host": ["{{base_url}}"],
+              "path": ["appointments"]
+            },
+            "description": "Obtiene todas las citas del usuario autenticado."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  {\n    \"request_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"property_url\": \"https://example.com/property/123\",\n    \"status\": \"ACCEPTED\",\n    \"reason\": \"APPOINTMENT\",\n    \"created_at\": \"2025-12-01T10:30:00Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get All Appointments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/all",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "all"]
+            },
+            "description": "Obtiene todas las citas del sistema (solo admin)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Appointment Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/status/:request_id",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "status", ":request_id"],
+              "variable": [
+                {
+                  "key": "request_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              ]
+            },
+            "description": "Obtiene el estado de una cita específica."
+          },
+          "response": []
+        },
+        {
+          "name": "Buy Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/buy",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "buy"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property_id\": \"prop-123-abc\"\n}"
+            },
+            "description": "Inicia el proceso de compra de una cita para una propiedad."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"request_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"status\": \"PENDING\",\n  \"deposit_token\": \"webpay-token-xyz\",\n  \"url\": \"https://webpay.transbank.cl/...\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Validate Buy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/validatebuy",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "validatebuy"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ws_token\": \"webpay-token-xyz\"\n}"
+            },
+            "description": "Valida el pago de una cita a través de Webpay."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"message\": \"Transacción aceptada y cita confirmada\",\n  \"request_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"property\": \"https://example.com/property/123\",\n  \"pdf_url\": \"https://s3.amazonaws.com/confirmations/abc123.pdf\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Buy Group Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/group/buy",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "group", "buy"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property_id\": \"prop-123-abc\"\n}"
+            },
+            "description": "Compra una cita de un agendamiento grupal disponible."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Appointment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/:request_id",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", ":request_id"],
+              "variable": [
+                {
+                  "key": "request_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              ]
+            },
+            "description": "Marca una cita como publicada."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Appointment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/:request_id",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", ":request_id"],
+              "variable": [
+                {
+                  "key": "request_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000"
+                }
+              ]
+            },
+            "description": "Elimina una cita del sistema."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auctions",
+      "item": [
+        {
+          "name": "Get All Auctions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auctions",
+              "host": ["{{base_url}}"],
+              "path": ["auctions"]
+            },
+            "description": "Lista todas las subastas del sistema."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  {\n    \"auction_id\": \"auction-123\",\n    \"proposal_id\": \"prop-456\",\n    \"url\": \"https://example.com/property/789\",\n    \"timestamp\": \"2025-12-01T10:30:00Z\",\n    \"quantity\": 5,\n    \"group_id\": \"04\",\n    \"operation\": \"offer\",\n    \"published\": true\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create Auction (Public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auctions",
+              "host": ["{{base_url}}"],
+              "path": ["auctions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auction_id\": \"auction-123\",\n  \"proposal_id\": \"prop-456\",\n  \"url\": \"https://example.com/property/789\",\n  \"timestamp\": \"2025-12-01T10:30:00Z\",\n  \"quantity\": 5,\n  \"group_id\": \"04\",\n  \"operation\": \"offer\"\n}"
+            },
+            "description": "Endpoint público para recibir ofertas, propuestas, aceptaciones y rechazos de subastas."
+          },
+          "response": [
+            {
+              "name": "Offer Response",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"message\": \"Offer procesada\",\n  \"auction_id\": \"auction-123\"\n}"
+            },
+            {
+              "name": "Proposal Response",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"message\": \"Proposal registrada\",\n  \"auction_id\": \"auction-123\",\n  \"id\": \"internal-id-789\"\n}"
+            },
+            {
+              "name": "Acceptance Response",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"message\": \"Acceptance procesada correctamente\",\n  \"acceptance_id\": \"accept-123\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Auction (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auctions/admin",
+              "host": ["{{base_url}}"],
+              "path": ["auctions", "admin"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auction_id\": \"auction-123\",\n  \"proposal_id\": \"prop-456\",\n  \"url\": \"https://example.com/property/789\",\n  \"timestamp\": \"2025-12-01T10:30:00Z\",\n  \"quantity\": 5,\n  \"group_id\": \"04\",\n  \"operation\": \"offer\"\n}"
+            },
+            "description": "Endpoint protegido para admin con validaciones adicionales."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Auction",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auctions/:auction_id",
+              "host": ["{{base_url}}"],
+              "path": ["auctions", ":auction_id"],
+              "variable": [
+                {
+                  "key": "auction_id",
+                  "value": "auction-123"
+                }
+              ]
+            },
+            "description": "Marca una subasta como publicada."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Auction (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auctions/admin/:auction_id",
+              "host": ["{{base_url}}"],
+              "path": ["auctions", "admin", ":auction_id"],
+              "variable": [
+                {
+                  "key": "auction_id",
+                  "value": "auction-123"
+                }
+              ]
+            },
+            "description": "Elimina una oferta del grupo 4 (solo admin)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Group Appointments",
+      "item": [
+        {
+          "name": "Get All Group Appointments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/groupappointments",
+              "host": ["{{base_url}}"],
+              "path": ["groupappointments"]
+            },
+            "description": "Lista todos los agendamientos grupales."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  {\n    \"id\": \"group-123\",\n    \"property_id\": \"prop-456\",\n    \"quantity\": 10,\n    \"discount\": 0.05,\n    \"price\": 50000,\n    \"created_at\": \"2025-12-01T10:30:00Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Buy Group Appointment (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/groupappointments/buy",
+              "host": ["{{base_url}}"],
+              "path": ["groupappointments", "buy"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property_id\": \"prop-456\",\n  \"quantity\": 10\n}"
+            },
+            "description": "Inicia la compra grupal de múltiples citas (solo admin)."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Group Buy (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/groupappointments/validatebuy",
+              "host": ["{{base_url}}"],
+              "path": ["groupappointments", "validatebuy"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ws_token\": \"webpay-token-xyz\"\n}"
+            },
+            "description": "Valida el pago de una compra grupal (solo admin)."
+          },
+          "response": []
+        },
+        {
+          "name": "Set Discount (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/groupappointments/:propertyId/discount",
+              "host": ["{{base_url}}"],
+              "path": ["groupappointments", ":propertyId", "discount"],
+              "variable": [
+                {
+                  "key": "propertyId",
+                  "value": "prop-456"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discount\": 0.08\n}"
+            },
+            "description": "Establece un descuento para un agendamiento grupal (máximo 10%, solo admin)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Properties",
+      "item": [
+        {
+          "name": "Get All Properties",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/properties?page=1&limit=25&price=500000&location=Santiago&date=2025-12-01",
+              "host": ["{{base_url}}"],
+              "path": ["properties"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "price",
+                  "value": "500000",
+                  "description": "Precio máximo"
+                },
+                {
+                  "key": "location",
+                  "value": "Santiago",
+                  "description": "Búsqueda por ubicación"
+                },
+                {
+                  "key": "date",
+                  "value": "2025-12-01",
+                  "description": "Fecha específica"
+                },
+                {
+                  "key": "url",
+                  "value": "",
+                  "description": "Búsqueda por URL",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Obtiene todas las propiedades con filtros opcionales de paginación, precio, ubicación, fecha y URL."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"total\": 100,\n  \"page\": 1,\n  \"limit\": 25,\n  \"results\": [\n    {\n      \"id\": \"prop-123\",\n      \"name\": \"Departamento en Las Condes\",\n      \"price\": 450000,\n      \"currency\": \"CLP\",\n      \"bedrooms\": 3,\n      \"bathrooms\": 2,\n      \"m2\": 85,\n      \"location\": \"Las Condes, Santiago\",\n      \"img\": \"https://example.com/img.jpg\",\n      \"url\": \"https://example.com/property/123\",\n      \"is_project\": false,\n      \"timestamp\": \"2025-12-01T10:30:00Z\",\n      \"reservations\": 3\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Property by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/properties/:id",
+              "host": ["{{base_url}}"],
+              "path": ["properties", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "prop-123"
+                }
+              ]
+            },
+            "description": "Obtiene una propiedad específica por su ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Create/Update Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/properties",
+              "host": ["{{base_url}}"],
+              "path": ["properties"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Departamento en Las Condes\",\n  \"price\": 450000,\n  \"currency\": \"CLP\",\n  \"bedrooms\": 3,\n  \"bathrooms\": 2,\n  \"m2\": 85,\n  \"location\": \"Las Condes, Santiago\",\n  \"img\": \"https://example.com/img.jpg\",\n  \"url\": \"https://example.com/property/123\",\n  \"is_project\": false,\n  \"timestamp\": \"2025-12-01T10:30:00Z\"\n}"
+            },
+            "description": "Crea una nueva propiedad o incrementa el contador de reservaciones si ya existe."
+          },
+          "response": []
+        },
+        {
+          "name": "Process Auction (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/properties/auctions",
+              "host": ["{{base_url}}"],
+              "path": ["properties", "auctions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"offer\"\n}"
+            },
+            "description": "Procesa operaciones de subasta (offer, proposal, acceptance, rejection) - Solo admin."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Suggestions",
+      "item": [
+        {
+          "name": "Check Workers Heartbeat",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/suggestions/heartbeat",
+              "host": ["{{base_url}}"],
+              "path": ["suggestions", "heartbeat"]
+            },
+            "description": "Verifica si el servicio de workers está funcionando correctamente."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"up\",\n  \"data\": {\n    \"message\": \"Workers service is running\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Property Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/suggestions/:property_id",
+              "host": ["{{base_url}}"],
+              "path": ["suggestions", ":property_id"],
+              "variable": [
+                {
+                  "key": "property_id",
+                  "value": "prop-123"
+                }
+              ]
+            },
+            "description": "Obtiene recomendaciones de propiedades similares basadas en una propiedad específica. Utiliza el servicio de workers para procesamiento en background."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  {\n    \"id\": \"prop-456\",\n    \"name\": \"Departamento similar\",\n    \"price\": 460000,\n    \"bedrooms\": 3,\n    \"location\": \"Providencia, Santiago\"\n  }\n]"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "cambiar según entorno: http://localhost:3000 / https://backend.g4market.dev/ / https://api.g4market.dev",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "por seguridad te podemos pasar en Slack",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "por seguridad te podemos pasar en Slack",
+      "type": "string"
+    }
+  ]
+}
