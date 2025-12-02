@@ -7,14 +7,8 @@ Como correr el frontend en local para testeo
 - Backend accesible y configuración de Auth0
 
 ## Variables de Entorno
-Crea un archivo `.env` en la raíz con:
+Crea un archivo `.env` en la raíz.
 
-```env
-VITE_BACKEND_URL=http://localhost:8000 (local) o https://api.iic2173grupo4.tech (produccion)
-VITE_AUTH0_DOMAIN=dev-y7xu4w0h31qkrz6s.us.auth0.com
-VITE_AUTH0_CLIENT_ID=p7nHaZdfApjdE24yUFJpHyiwo0pkZhgV
-VITE_AUTH0_AUDIENCE=https://api.iic2173grupo4.tech
-```
 
 Notas:
 - `VITE_BACKEND_URL`: base del backend (e.g. local o produccion).
