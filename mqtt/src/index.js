@@ -40,7 +40,7 @@ function connectToBroker() {
         console.error("Error en el ciclo de 'ConfirmedAppointments':", err.message);
       }
       // Espera 5 segundos DESPUÉS de que termine la ejecución
-      setTimeout(confirmedLoop, 10000);
+      setTimeout(confirmedLoop, 20000);
     })(); // El () al final la ejecuta por primera vez
 
     // Función "loop" auto-ejecutable para citas pendientes
@@ -51,7 +51,7 @@ function connectToBroker() {
         console.error("Error en el ciclo de 'PendingAppointments':", err.message);
       }
       // Espera 5 segundos DESPUÉS de que termine la ejecución
-      setTimeout(pendingLoop, 45000);
+      setTimeout(pendingLoop, 20000);
     })();
 
     // Función "loop" auto-ejecutable para auctions pendientes
@@ -62,7 +62,7 @@ function connectToBroker() {
         console.error("Error en el ciclo de 'PendingAuctions':", err.message);
       }
       // Espera 5 segundos DESPUÉS de que termine la ejecución
-      setTimeout(pendingAuctionsLoop, 5000);
+      setTimeout(pendingAuctionsLoop, 20000);
     })();
 
   });
