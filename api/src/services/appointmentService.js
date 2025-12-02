@@ -93,9 +93,10 @@ async function createAppointment(userId, propertyUrl, groupId = "04") {
  */
 async function createWebpayTransaction(requestId, cost, redirectUrl, sessionId = "test-iic2173") {
   const buyOrder = requestId.slice(0, 26);
+  const amount = Math.floor(cost);
 
   try {
-    const trx = await tx.create(buyOrder, sessionId, cost, redirectUrl);
+    const trx = await tx.create(buyOrder, sessionId, amount, redirectUrl);
     return trx;
   } catch (err) {
     console.error("Error creating WebPay transaction:", err);

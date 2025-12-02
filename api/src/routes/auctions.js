@@ -2,6 +2,8 @@ const Router = require("@koa/router");
 const requireAdmin = require("../middlewares/adminMiddleware");
 const { Auction, GroupAppointment, Property } = require("../models");
 const router = new Router();
+const { Op } = require("sequelize");
+const { v4: uuidv4 } = require("uuid");
 
 // GET /auctions - Listar todas las subastas
 router.get("/", async (ctx) => {
@@ -85,67 +87,68 @@ router.post("/", async (ctx) => {
             return;
         }
 
+        // Solo nos importan proposals de ofertas propias
         if (offer.group_id !== 4) {
             ctx.status = 200;
             ctx.body = { message: "Proposal no está dirigido a oferta propia (ignorada)", auction_id };
             return;
         }
 
-        const [newProposal, created] = await Auction.findOrCreate({
-            where: { auction_id }, // El auction_id del proposal es único
-            defaults: {
-                proposal_id,
-                url,
-                timestamp,
-                quantity,
-                group_id,
-                operation,
-            }
+        // ✅ IMPORTANTE: crear siempre un nuevo Proposal, aunque comparta auction_id
+        const newProposal = await Auction.create({
+            auction_id,     // puede repetirse
+            proposal_id,
+            url,
+            timestamp,
+            quantity,
+            group_id,
+            operation,
         });
 
-        if (!created) {
-            ctx.status = 200;
-            ctx.body = { message: "Proposal ya existía (ignorada)", auction_id };
-            return;
-        }
-
         ctx.status = 201;
-        ctx.body = { message: "Proposal registrada", auction_id };
+        ctx.body = {
+            message: "Proposal registrada",
+            auction_id: newProposal.auction_id,
+            id: newProposal.id, // el PK real
+        };
         return;
     }
+
 
     // ------------------------------------------
     // 3. OPERATION = "acceptance"
     // ------------------------------------------
     if (operation === "acceptance") {
-        // Intentar crear la aceptación primero (Idempotencia)
-        const [newAcceptance, created] = await Auction.findOrCreate({
-            where: { auction_id },
-            defaults: {
-                proposal_id,
-                url,
-                timestamp,
-                quantity,
-                group_id,
-                operation,
-            }
+
+        // 1. Buscar la oferta original, su propiedad, cantidad y si existe groupAppointment
+        const offer = await Auction.findOne({
+            where: {
+                auction_id,
+                operation: "offer",
+            },
         });
 
-        // Solo si la acabamos de crear, borramos la oferta vieja
-        if (created) {
-            const offer = await Auction.findOne({
-                where: {
-                    auction_id,
-                    operation: "offer",
-                },
-            });
-
-            if (offer) {
-                await offer.destroy();
-            }
+        if (!offer) {
+            ctx.throw(404, `No existe una oferta con el auction_id ${auction_id}`);
         }
 
-        // Validar si existe un proposal válido (solo informativo en este punto)
+        const offerProperty = await Property.findOne({
+            where: { url: offer.url },
+        });
+
+        if (!offerProperty) {
+            ctx.throw(404, `No existe una propiedad con el URL ${offer.url}`);
+        }
+
+        const offer_property_id = offerProperty.id;
+
+        const offer_quantity = offer.quantity;
+
+        const offer_group_appointment = await GroupAppointment.findOne({
+            where: { property_id: offer_property_id },
+        });
+
+        // 2. Buscar proposal local, su propiedad, cantidad y si existe groupAppointment
         const proposal = await Auction.findOne({
             where: {
                 auction_id,
@@ -155,42 +158,123 @@ router.post("/", async (ctx) => {
             },
         });
 
-        if (!proposal && created) {
-            // Nota: No lanzamos error para no revertir la transacción, solo logueamos
-            console.warn("⚠️ Acceptance creada pero no se encontró proposal local con group_id 4");
+        const proposalProperty = await Property.findOne({
+            where: { url: proposal.url },
+        });
+
+        if (!proposalProperty) {
+            ctx.throw(404, `No existe una propiedad con el URL ${proposal.url}`);
         }
 
-        ctx.status = created ? 201 : 200;
+        const proposal_property_id = proposalProperty.id;
+
+        const proposal_quantity = proposal.quantity;
+
+        const proposal_group_appointment = await GroupAppointment.findOne({
+            where: { property_id: proposal_property_id },
+        });
+
+        // ⚠️ SI EL PROPOSAL NO ES DEL GRUPO 4
+        if (!proposal) {
+            ctx.status = 201;
+            ctx.body = {
+                message: `Proposal aceptado no es del grupo 4, ignorado`
+            };
+            // Se eliminan los proposals del grupo 4
+            await Auction.destroy({
+                where: {
+                    auction_id,
+                    group_id: 4,
+                },
+            });
+            // Eliminamos la oferta original
+            if (offer) {
+                await offer.destroy();
+            }
+            return;
+        }
+
+        // 3. Crear un nuevo registro de aceptación
+        const newAcceptance = await Auction.create({
+            auction_id,
+            proposal_id,
+            url,
+            timestamp,
+            quantity,
+            group_id,
+            operation,  // "acceptance"
+        });
+
+        // 4. Si existe offer_group_appointment, le agregamos offer_quantity
+        if (offer_group_appointment) {
+            offer_group_appointment.quantity += offer_quantity;
+            await offer_group_appointment.save();
+        }
+
+        // 5. Si no existe, lo creamos
+        if (!offer_group_appointment) {
+            await GroupAppointment.create({
+                id: uuidv4(),
+                property_id: offer_property_id,
+                quantity: offer_quantity,
+                discount: 0,
+                price: offerProperty.price,
+                created_at: new Date()
+            });
+        }
+
+        // 6. Si existe proposal_group_appointment, le quitamos proposal_quantity
+        if (proposal_group_appointment) {
+            proposal_group_appointment.quantity -= proposal_quantity;
+            await proposal_group_appointment.save();
+        }
+
+        // 7. Eliminamos la oferta original
+        if (offer) {
+            await offer.destroy();
+        }
+
+        // 8. Eliminamos todos los otros proposal a la oferta original no aceptados 
+        await Auction.destroy({
+            where: {
+                auction_id,
+                proposal_id: { [Op.ne]: proposal_id }, // proposal_id distinto al aceptado
+                group_id: 4,
+                operation: "proposal",
+            },
+        });
+
+        // 9. Respuesta
+        ctx.status = 201;
         ctx.body = {
-            message: created ? "Acceptance procesado. Oferta cerrada." : "Acceptance duplicada ignorada.",
-            offer_cleaned: created
+            message: "Acceptance procesada correctamente",
+            acceptance_id: newAcceptance.id
         };
         return;
     }
+
 
     // ------------------------------------------
     // 4. OPERATION = "rejection"
     // ------------------------------------------
     if (operation === "rejection") {
-        const proposal = await Auction.findOne({
-            where: {
-                auction_id,
-                proposal_id,
-                operation: "proposal",
-                group_id: 4,
-            },
+        // 1. Creamos un nuevo registro de rechazo
+        const newRejection = await Auction.create({
+            auction_id,
+            proposal_id,
+            url,
+            timestamp,
+            quantity,
+            group_id,
+            operation,  // "rejection"
         });
 
-        let wasDeleted = false;
-        if (proposal) {
-            await proposal.destroy();
-            wasDeleted = true;
-        } else {
-            console.log("ℹ️ Rejection recibida pero la propuesta no existía o ya fue borrada.");
-        }
-
-        ctx.status = 200;
-        ctx.body = { message: "Rejection procesado", deleted: wasDeleted };
+        // 2. Respuesta
+        ctx.status = 201;
+        ctx.body = {
+            message: "Rejection procesada correctamente",
+            rejection_id: newRejection.id
+        };
         return;
     }
 
@@ -333,25 +417,32 @@ router.post("/admin", requireAdmin, async (ctx) => {
     // ADMIN: OPERATION = "acceptance"
     // ------------------------------------------
     if (operation === "acceptance") {
-
-        // 1. Crear aceptación (o fallar si ya existe)
-        const [newAcceptance, created] = await Auction.findOrCreate({
-            where: { auction_id },
-            defaults: {
+        // 1. Buscar el proposal, su propiedad, cantidad y si existe groupAppointment
+        const proposal = await Auction.findOne({
+            where: {
+                auction_id,
                 proposal_id,
-                url,
-                timestamp,
-                quantity,
-                group_id,
-                operation,
-            }
+                operation: "proposal",
+            },
         });
 
-        if (!created) {
-            ctx.throw(409, "Ya existe una aceptación para este auction_id");
+        const proposalProperty = await Property.findOne({
+            where: { url: proposal.url },
+        });
+
+        if (!proposalProperty) {
+            ctx.throw(404, `No existe una propiedad con el URL ${proposal.url}`);
         }
 
-        // 2. Buscar y eliminar offer previo
+        const proposal_property_id = proposalProperty.id;
+
+        const proposal_quantity = proposal.quantity;
+
+        const proposal_group_appointment = await GroupAppointment.findOne({
+            where: { property_id: proposal_property_id },
+        });
+
+        // 2. Buscar la oferta local, su propiedad, cantidad y si existe groupAppointment
         const offer = await Auction.findOne({
             where: {
                 auction_id,
@@ -359,29 +450,72 @@ router.post("/admin", requireAdmin, async (ctx) => {
             },
         });
 
-        if (offer) {
-            await offer.destroy();
+        const offerProperty = await Property.findOne({
+            where: { url: offer.url },
+        });
+
+        if (!offerProperty) {
+            ctx.throw(404, `No existe una propiedad con el URL ${offer.url}`);
         }
 
-        // 3. Validar proposal (informativo para admin)
-        const proposal = await Auction.findOne({
+        const offer_property_id = offerProperty.id;
+
+        const offer_quantity = offer.quantity;
+
+        const offer_group_appointment = await GroupAppointment.findOne({
+            where: { property_id: offer_property_id },
+        });
+
+        // 3. Crear un nuevo registro de aceptación
+        const newAcceptance = await Auction.create({
+            auction_id,
+            proposal_id,
+            url,
+            timestamp,
+            quantity,
+            group_id,
+            operation,  // "acceptance"
+        });
+
+        // 4. Si existe proposal_group_appointment, le agregamos proposal_quantity a quantity
+        if (proposal_group_appointment) {
+            proposal_group_appointment.quantity += proposal_quantity;
+            await proposal_group_appointment.save();
+        }
+
+        // 5. Si no existe, lo creamos
+        if (!proposal_group_appointment) {
+            await GroupAppointment.create({
+                id: uuidv4(),
+                property_id: proposal_property_id,
+                quantity: proposal_quantity,
+                discount: 0,
+                price: proposalProperty.price,
+                created_at: new Date()
+            });
+        }
+
+        // 6. Si existe offer_group_appointment, le quitamos offer_quantity a quantity
+        if (offer_group_appointment) {
+            offer_group_appointment.quantity -= offer_quantity;
+            await offer_group_appointment.save();
+        }
+
+        // 7. Eliminamos la oferta original
+        await offer.destroy();
+
+        // 8. Eliminamos todos los otros proposal no aceptados
+        await Auction.destroy({
             where: {
                 auction_id,
-                proposal_id,
                 operation: "proposal",
-                group_id: 4,
             },
         });
 
-        if (!proposal) {
-            // Aquí en admin sí podemos ser estrictos si quisiéramos, pero
-            // mantenemos consistencia con no bloquear la creación
-            console.warn("⚠️ Admin creó Acceptance pero no se encontró proposal group_id 4");
-        }
-
+        // 9. Respuesta
         ctx.status = 201;
         ctx.body = {
-            message: "Acceptance registrado correctamente (admin)",
+            message: "Acceptance procesada correctamente",
             auction_id: newAcceptance.auction_id,
         };
         return;
@@ -391,25 +525,26 @@ router.post("/admin", requireAdmin, async (ctx) => {
     // ADMIN: OPERATION = "rejection"
     // ------------------------------------------
     if (operation === "rejection") {
+        // 1. Buscamos el proposal
         const proposal = await Auction.findOne({
             where: {
                 auction_id,
                 proposal_id,
                 operation: "proposal",
-                group_id: 4,
             },
         });
 
-        let wasDeleted = false;
-        if (proposal) {
-            await proposal.destroy();
-            wasDeleted = true;
+        if (!proposal) {
+            ctx.throw(404, `No existe una propuesta con el proposal_id ${proposal_id}`);
         }
 
-        ctx.status = 200;
+        // 2. Eliminamos la propuesta
+        await proposal.destroy();
+
+        // 3. Respuesta
+        ctx.status = 201;
         ctx.body = {
-            message: "Proposal rechazado y eliminado correctamente (admin)",
-            deleted: wasDeleted,
+            message: "Rejection procesada correctamente"
         };
         return;
     }
