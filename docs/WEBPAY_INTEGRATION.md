@@ -165,18 +165,6 @@ Muestra solicitudes de reserva con opción de reintentar pago si fue rechazado.
 
 
 
-## Variables de Entorno
-
-**Backend:**
-```env
-REDIRECT_URL=http://localhost:5173/completed-purchase / https://g4market.tech/completed-purchase
-PDF_GENERATE_URL=https://abmuzxwsn4.execute-api.us-east-2.amazonaws.com/generate-pdf
-```
-
-**Frontend:**
-```env
-VITE_BACKEND_URL=http://localhost:3000 / https://api.iic2174grupo4.tech
-```
 
 ---
 
