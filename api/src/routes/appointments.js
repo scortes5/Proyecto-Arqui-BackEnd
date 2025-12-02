@@ -392,6 +392,7 @@ router.post("/validatebuy", async (ctx) => {
 // POST /appointments/group/buy
 router.post("/group/buy", async (ctx) => {
   console.log("=== /buy called (Group Logic) ===");
+  console.log()
   
   const t = await sequelize.transaction();
 
@@ -428,7 +429,7 @@ router.post("/group/buy", async (ctx) => {
     
     let finalPrice = basePrice;
     if (groupStock.discount) {
-        finalPrice = basePrice * (1 - groupStock.discount);
+        finalPrice = basePrice * (1 - (groupStock.discount)/100);
     }
     
     const cost = Math.floor(finalPrice); 
